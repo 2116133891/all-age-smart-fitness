@@ -1,0 +1,6 @@
+task printTestCp {
+    doLast {
+        def f = new File("$buildDir/cp.txt")
+        f.text = project(':app').sourceSets.test.runtimeClasspath.collect { it.absolutePath }.join(';')
+    }
+}

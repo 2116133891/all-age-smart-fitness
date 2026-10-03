@@ -1,0 +1,45 @@
+# ===== 编译 / 构建产物 =====
+build/
+app/build/
+*.apk
+*.ap_
+*.aab
+app/intermediates/
+app/tmp/
+
+# ===== Gradle =====
+.gradle/
+gradle/wrapper/gradle-wrapper.properties.bak
+# 保留 gradle wrapper 本身（下面单独放行）
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ===== 本机环境配置（含绝对路径 / SDK 位置，因人而异）=====
+local.properties
+.kotlin/
+captures/
+.externalNativeBuild/
+
+# ===== IDE =====
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.swp
+out/
+bin/
+
+# ===== Claude 本地 / 守护（非项目代码，跨机器不可移植）=====
+.claude/
+.claude.disabled/
+start-watchdog.ps1.disabled
+stop-watchdog.ps1.disabled
+
+# ===== 运行日志 / 临时文件 =====
+*.log
+*.tmp
+app/build/cp.txt
+app/build/test-cp.txt
+
+# ===== 保留清单（显式放行，避免被上面规则误伤）=====
+!app/src/main/assets/pose_landmarker.task
