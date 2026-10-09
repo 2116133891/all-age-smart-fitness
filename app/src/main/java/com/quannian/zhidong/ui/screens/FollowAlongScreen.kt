@@ -236,6 +236,7 @@ fun FollowAlongScreen(
                             exerciseKey = ex.analysisKind,
                             figureSizePx = 440,
                             livePose = coachPose,
+                            coachState = coachState,
                             modifier = Modifier.fillMaxSize()
                         )
                     }

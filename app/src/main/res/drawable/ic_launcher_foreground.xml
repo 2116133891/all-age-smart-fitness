@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  全龄智动 · 自适应图标「前景层」
+  主体：一名奔跑/运动的人形（白色）+ 人体姿态识别关键点（青色圆点）
+  + 识别框角标（青色）。深蓝青绿背景（见 ic_launcher_background）。
+  内容全部落在 108dp 自适应图标中央 ~66dp 安全区内，缩小到桌面尺寸仍清晰。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ===== 人形（白色，圆润描边）===== -->
+    <!-- 头 -->
+    <path
+        android:pathData="M60,34 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0"
+        android:fillColor="#FFFFFFFF" />
+    <!-- 躯干 -->
+    <path
+        android:pathData="M57,42 L51,61"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <!-- 前臂（举起） -->
+    <path
+        android:pathData="M56,44 L65,40 L72,31"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- 后臂 -->
+    <path
+        android:pathData="M55,45 L47,50 L41,55"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- 前腿（跨步） -->
+    <path
+        android:pathData="M51,60 L60,72 L59,85"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- 后腿 -->
+    <path
+        android:pathData="M50,60 L41,70 L35,82"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- ===== 姿态识别关键点（青色圆点）===== -->
+    <path android:pathData="M60,27 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M57,43 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M53,44 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M65,40 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M72,31 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M47,50 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M41,55 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M53,60 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M49,60 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M60,72 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M59,85 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M41,70 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+    <path android:pathData="M35,82 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" android:fillColor="#FF35E0F0" />
+
+    <!-- ===== 识别框角标（青色，暗示"姿态识别/检测"）===== -->
+    <path
+        android:pathData="M26,32 L26,26 L32,26"
+        android:strokeColor="#FF7DE3F0"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M82,76 L82,82 L76,82"
+        android:strokeColor="#FF7DE3F0"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

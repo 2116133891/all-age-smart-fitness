@@ -1,5 +1,7 @@
 package com.quannian.zhidong.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,12 +20,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.SportsTennis
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,12 +49,18 @@ import com.quannian.zhidong.ui.theme.Palette
 
 /**
  * 首页（竞赛版，对照 spec §40）：
- *   全龄智动
- *   数字人智能运动指导
- *   👧 儿童  轻运动 · 快乐成长
- *   🏃 青年  科学运动 · 姿态纠正
- *   🧓 银龄  舒缓运动 · 健康相伴
- *   + "我的训练" 入口（历史数据 / 成长曲线）
+ *   全龄智动 · 数字人智能运动指导
+ *   儿童 / 青年 / 银龄 三个年龄段入口 + 「AI 动作诊断」+「我的训练」
+ *
+ *  P0 稳定性（对应验收）：
+ *   - 三个教练头像**静止站立**（[CoachAvatar] 委托 CoachVisual，无任何循环动画）。
+ *   - 点击卡片 = **克制**的 Material ripple（有界，不造成布局抖动）。
+ *   - 首次进入卡片 = **一次性** 220ms 淡入（graphicsLayer，不改布局；按卡片身份 key，
+ *     不会在快速点击 / 状态更新 / 重复进出时重复叠加）。
+ *
+ *  P1 视觉一致性：
+ *   - 入口图标统一为 Material 图标（统一线条图标风格，避免 emoji 与系统图标混搭）；
+ *     教练形象仍为真实 3D 数字人 PNG（人物用图片，控件用图标，二者不混用）。
  */
 @Composable
 fun HomeScreen(
@@ -67,15 +88,15 @@ fun HomeScreen(
             }
         }
 
-        // 三个年龄入口
+        // 三个年龄入口（教练头像静止站立；卡片一次性淡入 + 克制 ripple）
         items(AgeGroup.entries.toList()) { age ->
             AgeCard(
                 age = age,
                 onClick = { onPickAge(age.id) },
                 icon = when (age) {
-                    AgeGroup.CHILD -> "👧"
-                    AgeGroup.YOUTH -> "🏃"
-                    AgeGroup.SENIOR -> "🧓"
+                    AgeGroup.CHILD -> Icons.Filled.ChildCare
+                    AgeGroup.YOUTH -> Icons.Filled.SportsTennis
+                    AgeGroup.SENIOR -> Icons.Filled.Accessibility
                 }
             )
         }
@@ -94,20 +115,35 @@ fun HomeScreen(
     }
 }
 
+/**
+ * 年龄段入口卡片。
+ *  - 一次性 220ms 淡入（首次组合时播放，key 为 [age.id]，不会重复 / 叠加 / 抖动布局）。
+ *  - 点击 = 有界 ripple（克制的按压反馈），不改变卡片尺寸 => 无位置跳变。
+ */
 @Composable
-private fun AgeCard(age: AgeGroup, onClick: () -> Unit, icon: String) {
+private fun AgeCard(age: AgeGroup, onClick: () -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     val color = Palette.ageColor(age.id)
     val soft = Palette.ageSoft(age.id)
+
+    // 一次性淡入（graphicsLayer alpha，纯绘制，不改布局）
+    var hasEntered by remember(age.id) { mutableStateOf(false) }
+    val enterAlpha by animateFloatAsState(
+        targetValue = if (hasEntered) 1f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "ageCardEnter_${age.id}"
+    )
+    LaunchedEffect(age.id) { hasEntered = true }
+
     Row(
         modifier = Modifier
+            .graphicsLayer { alpha = enterAlpha }
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(Palette.card, RoundedCornerShape(24.dp))
             .padding(18.dp)
             .clickable(
                 onClick = onClick,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
+                interactionSource = remember(age.id) { MutableInteractionSource() }
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -119,11 +155,13 @@ private fun AgeCard(age: AgeGroup, onClick: () -> Unit, icon: String) {
                 .background(soft, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
-            CoachAvatar(ageId = age.id, size = 56.dp)
+            // 静止站立的真实数字教练（不跳动 / 不缩放 / 不闪烁）
+            CoachAvatar(ageId = age.id, size = 60.dp)
         }
         Column(modifier = Modifier.weight(1f)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(icon, fontSize = 18.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                // 统一线条图标（替代 emoji），tint = 年龄段主色
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
                 Text(age.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
             }
             Spacer(Modifier.height(3.dp))
@@ -147,8 +185,7 @@ private fun AiDiagnoseCard(onClick: () -> Unit) {
             .padding(18.dp)
             .clickable(
                 onClick = onClick,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
+                interactionSource = remember { MutableInteractionSource() }
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -160,7 +197,7 @@ private fun AiDiagnoseCard(onClick: () -> Unit) {
                 .background(Palette.accentSoft, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("🎯", fontSize = 30.sp)
+            Icon(Icons.Filled.Insights, contentDescription = "AI 动作诊断", tint = Palette.accent, modifier = Modifier.size(30.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -169,12 +206,9 @@ private fun AiDiagnoseCard(onClick: () -> Unit) {
             Spacer(Modifier.height(3.dp))
             Text("上传视频 · 发现问题 · 数字教练针对性纠正", fontSize = 12.sp, color = Palette.inkSoft)
             Spacer(Modifier.height(8.dp))
-            androidx.compose.foundation.layout.Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                com.quannian.zhidong.ui.components.Pill("仅本机分析", Palette.accent)
-                com.quannian.zhidong.ui.components.Pill("改善前后对比", Palette.good)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Pill("仅本机分析", Palette.accent)
+                Pill("改善前后对比", Palette.good)
             }
         }
         Text("→", fontSize = 22.sp, color = Palette.accent, fontWeight = FontWeight.Bold)
@@ -183,7 +217,8 @@ private fun AiDiagnoseCard(onClick: () -> Unit) {
 
 /** "我的训练" 入口卡片。 */
 @Composable
-private fun MyTrainingCard(onClick: () -> Unit) {    Row(
+private fun MyTrainingCard(onClick: () -> Unit) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
@@ -191,8 +226,7 @@ private fun MyTrainingCard(onClick: () -> Unit) {    Row(
             .padding(18.dp)
             .clickable(
                 onClick = onClick,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
+                interactionSource = remember { MutableInteractionSource() }
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -204,7 +238,7 @@ private fun MyTrainingCard(onClick: () -> Unit) {    Row(
                 .background(Palette.accentSoft, RoundedCornerShape(18.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("📊", fontSize = 26.sp)
+            Icon(Icons.Filled.History, contentDescription = "我的训练", tint = Palette.accent, modifier = Modifier.size(26.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
             Text("我的训练", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Palette.ink)

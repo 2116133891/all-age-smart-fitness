@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  全龄智动 · 自适应图标「背景层」
+  深蓝 -> 青绿 对角渐变（现代健康科技配色，与主题 accent #2F7BE8 协调）。
+  108x108 全出血；前景层内容需落在中央 ~66dp 安全区内。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 主渐变：左上深蓝 -> 右下青绿 -->
+    <path
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108">
+                <item android:offset="0.0" android:color="#FF0E2C66" />
+                <item android:offset="0.5" android:color="#FF155FB0" />
+                <item android:offset="1.0" android:color="#FF1FB6C9" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 顶部高光，增强质感（浅青，低占比） -->
+    <path
+        android:pathData="M0,0 L108,0 L108,34 C70,54 38,54 0,36 Z"
+        android:fillColor="#1AFFFFFF" />
+</vector>

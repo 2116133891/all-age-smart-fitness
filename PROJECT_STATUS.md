@@ -1,9 +1,43 @@
 # PROJECT_STATUS.md
 
 > 全龄智动 · 智能运动指导 Android MVP（城市大赛项目）
-> 更新时间：2026-10-03 · 主程：Agnes-3.0-flash（Claude Code）
-> 项目根：`c:\Users\Admin\Desktop\城市大赛项目`
-> 包名：`com.quannian.zhidong` · applicationId 同
+> 更新时间：2026-10-09 · 主程：Agnes-3.0-flash（Claude Code）
+> 项目根：`C:\Users\23163\Desktop\城市大赛项目` · 远程 `github.com/2116133891/all-age-smart-fitness`
+> 包名：`com.quannian.zhidong` · applicationId 同（**本轮未改包名/applicationId/namespace**）
+
+## ⚠️ 本轮（10-09）参赛版视觉升级与体验优化
+**目标：首页稳定、数字人统一、动作示范直观、App 图标重做、核心能力不破坏。以下均为"代码已改、可编译预期"级别；构建/单测/真机在本环境未执行（见 §0）。**
+
+### 0. 验证诚实分级（本环境约束）
+- 本会话运行环境 **无 JDK 17、无 Android SDK、无 Gradle、无 adb**：`local.properties` 仍指向不存在的 `C:\Users\Admin\.android-build\android-sdk`，`JAVA_HOME`=JDK 8。
+- 因此 **APK 生成、Gradle 单测、真机摄像头/视觉验收均"未在本环境执行"**；改动为精确代码修改，需在具备 JDK17+SDK 的机器上执行 `.\gradlew :app:assembleDebug` 复核。
+- 静态核对（已完成）：① 数字人体系**不再存在任何 `infiniteRepeatable`/`rememberInfiniteTransition` 调用点**（grep 确认）；② 所有 `CoachAvatar` 调用点仅传 `ageId`+`size`（与新签名匹配）；③ 旧的 Canvas 火柴人 / 帧序列符号无悬空引用；④ App 图标引用链（`mipmap-anydpi-v26` → `@drawable/ic_launcher_{background,foreground}`）完好，且**无密度 mipmap 目录**，矢量替换无重复资源冲突。
+
+### 1. 修改文件清单（本轮 7 处）
+| 文件 | 变更 |
+|---|---|
+| `ui/components/CoachVisual.kt` | 重写为**唯一数字人视觉源**；删除 2s 无限呼吸循环（跳动根因）；`CoachAvatar` 改竖向容器 + `ContentScale.Fit`（修头脚被 Crop 裁切、透明背景不显黑块）；`CoachFigure`/`TeachingCoach` 默认静止站立，诚实标注 Phase 1（非 3D） |
+| `ui/components/Components.kt` | 顶层 `CoachAvatar` 改为**转发**到 `CoachVisual.CoachAvatar`（消除双实现/双资源映射）；删除死代码 Canvas 火柴人与未用动画 import；**保留** `Card`/`Pill`/`ExerciseCard` |
+| `ui/screens/HomeScreen.kt` | P0 稳定：卡片一次性 220ms 淡入（`graphicsLayer` alpha，按 `age.id` key，不叠加）+ 有界 ripple（克制按压反馈，不改布局）；P1 首页入口图标统一为 Material 图标（去 emoji 混搭） |
+| `ui/components/CoachSpriteView.kt` | 新增 `coachState` 形参并透传给 `CoachFigure`；跟练页数字人按教练状态做**克制反馈**，与用户实时骨架明确区分 |
+| `ui/screens/FollowAlongScreen.kt` | 跟练页 `CoachSpriteView` 调用处补 `coachState = coachState`（单点、编译安全） |
+| `res/drawable/ic_launcher_background.{png→xml}` | 重做为**矢量**自适应图标背景：深蓝→青绿对角渐变 + 顶部高光（品牌科技配色） |
+| `res/drawable/ic_launcher_foreground.{png→xml}` | 重做为**矢量**自适应图标前景：白色运动人形 + 姿态识别关键点（青点）+ 识别框角标，落在 108dp 安全区内 |
+
+### 2. 核心能力保护（回归核对，未改动业务逻辑）
+- 导航路由、`applicationId`/`namespace`、Room 结构、`FollowAlongViewModel` 会话清理、CameraX 生命周期、MediaPipe 33 关键点、9 个分析器与独立实例、深蹲状态机/计数/评分/纠错、训练结束即存本地记录 —— **本轮均未触碰**，仅改视觉层组件与图标资源。
+- 未升级 Kotlin/Gradle/Compose/CameraX/MediaPipe 版本；未删除已稳定分析器；未改数据库/包名。
+
+### 3. 数字人素材接入与资源映射说明（交付项 2）
+- 资源命名：`coach_child` / `coach_youth` / `coach_senior`（480×960 高质量 3D 透明背景，风格统一，同品牌三角 logo）→ 位于 `res/drawable/`，**唯一**映射点在 `CoachVisual.coachResource(ageId)`。
+- 动作示范（诚实 Phase 1）：教学/跟练 = **分年龄静态 PNG + 分运动文字示范 + 状态微反馈**；`CoachMotionEngine.teachingSequence` 按运动生成不同文案序列（深蹲/侧拉伸/开合跳/八段锦 8 式…），避免"所有运动同一图"。**不冒充真实连续 3D 动画**；分阶段动作素材 / 真 3D（Filament）为 Phase 2 预留。
+
+### 4. 仍存在的问题与后续建议
+- [ ] **P1 去 emoji（已部分完成）**：仅首页已换 Material 图标；`Age/Exercise/Coach/Report/MyTraining` 屏内仍有约 9 处 emoji（🎯📊💡🎤🔊🔇↻✓），受"无法编译验证"约束本轮**未全量替换**，建议在可构建机上统一为 Material 图标。
+- [ ] 跟练页若需数字人**逐帧跟随动作**（而非状态微反馈），需 Phase 2 分阶段动作素材（切图/帧序列）。
+- [ ] `local.properties` 仍指向不存在的 Admin 路径；构建前需按当前机器写 `sdk.dir`（或配 `ANDROID_HOME`）+ JDK17。
+- [ ] 建议在可构建机上跑 `:app:assembleDebug` + JVM 单测，并真机验证：首页停留 ≥30s 教练静止、多次进出无动画叠加、图标显示、跟练联动、图标在桌面清晰度。
+- [ ] App 图标矢量已接入，但 `mipmap-anydpi-v26` 仅覆盖 API 26+；**当前无密度 mipmap 兜底 PNG**，若需支持 API 24/25 需补 PNG（矢量 adaptive icon 在 <26 会显示为空/系统默认）。
 
 ## ⚠️ 本轮（10-03）状态修正
 **本文件 10-01 版的"P0 全完成 / P1 未做"描述已过时。真实代码库已远超该描述。**
