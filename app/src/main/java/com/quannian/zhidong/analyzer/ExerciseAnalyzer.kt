@@ -44,7 +44,9 @@ data class AnalysisResult(
     /** 额外 UI 展示项，例如"八段锦 · 第 N 式"。null 表示不显示。 */
     val subLabel: String? = null,
     /** 节奏稳定性 0-1（跳绳 / 开合跳用），默认 1。 */
-    val rhythm: Float = 1f
+    val rhythm: Float = 1f,
+    /** 多式动作当前"式/小节"序号（八段锦 0..7、太极 0..4 等），默认 0。供教练动作引擎选择对应姿态。 */
+    val moveIndex: Int = 0
 )
 
 /**
@@ -57,22 +59,32 @@ data class AnalysisResult(
  */
 object ExerciseAnalyzerFactory {
 
-    private val instances: Map<String, ExerciseAnalyzer> = mapOf(
-        "squat" to SquatAnalyzer(),
-        "shoulder" to NeckStretchAnalyzer(),
-        "yoga" to YogaAnalyzer(),
-        "jumprope" to JumpRopeAnalyzer(),
-        "stretch" to StretchAnalyzer(),
-        "jack" to JumpingJackAnalyzer(),
-        "baduanjin" to BaduanjinAnalyzer(),
-        "taichi" to TaiChiAnalyzer(),
-        "easy" to GentleStretchAnalyzer()
-    )
+    /**
+     * 每个动作的"零状态"工厂：每次 [freshFor] 都 new 一个全新分析器（P0：避免跨 Session 共享有状态实例）。
+     *  用**函数**（非 lambda / 匿名类）实现，保持纯 JVM 可直跑（java -cp 单测），不引入
+     *  Compose 编译器生成的 LiveLiterals 合成类。
+     */
+    private fun createNew(key: String): ExerciseAnalyzer = when (key) {
+        "squat" -> SquatAnalyzer()
+        "shoulder" -> NeckStretchAnalyzer()
+        "yoga" -> YogaAnalyzer()
+        "jumprope" -> JumpRopeAnalyzer()
+        "stretch" -> StretchAnalyzer()
+        "jack" -> JumpingJackAnalyzer()
+        "baduanjin" -> BaduanjinAnalyzer()
+        "taichi" -> TaiChiAnalyzer()
+        "easy" -> GentleStretchAnalyzer()
+        else -> SquatAnalyzer()  // 未知 key 兜底深蹲（最稳通用动作）
+    }
 
-    /** 按运动 key 返回分析器；未知 key 兜底为深蹲（最稳的通用动作）。 */
-    fun forKey(key: String?): ExerciseAnalyzer =
-        key?.let { instances[it] } ?: instances["squat"]!!
+    private val knownKeys = setOf("squat", "shoulder", "yoga", "jumprope", "stretch", "jack", "baduanjin", "taichi", "easy")
+
+    /** 为一次训练 Session 返回**全新**的专属分析器。未知 key 兜底为深蹲。 */
+    fun freshFor(key: String?): ExerciseAnalyzer = if (key != null && key in knownKeys) createNew(key) else createNew("squat")
+
+    /** 兼容旧调用：返回一个全新分析器（不再复用 9 个长期单例）。 */
+    fun forKey(key: String?): ExerciseAnalyzer = freshFor(key)
 
     /** 是否某个 key 有专属分析器（用于 UI 展示"已支持实时检测"）。 */
-    fun hasDedicated(key: String?): Boolean = key != null && instances.containsKey(key)
+    fun hasDedicated(key: String?): Boolean = key != null && key in knownKeys
 }

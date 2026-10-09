@@ -105,6 +105,13 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
+    // Compose 运行时（纯 JVM 测试里加载 @Composable 生成的 LiveLiterals / 状态需要）
+    testImplementation 'androidx.compose.runtime:runtime:1.5.4'
+    testImplementation 'androidx.compose.foundation:foundation:1.5.4'
+    testImplementation 'androidx.compose.foundation:foundation-layout:1.5.4'
+    testImplementation 'androidx.compose.material3:material3:1.1.2'
+    testImplementation 'androidx.compose.ui:ui:1.5.4'
+    testImplementation 'androidx.compose.ui:ui-graphics:1.5.4'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'

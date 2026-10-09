@@ -1,5 +1,6 @@
 package com.quannian.zhidong.ui.components
 
+import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -31,7 +32,21 @@ private val BONES: List<IntArray> = listOf(
 
 /**
  * 在摄像头画面之上绘制人体骨骼。
- * [landmarks] 为归一化（0..1）33 关键点，[widthPx]/[heightPx] 为画布像素尺寸。
+ *
+ *  关键点由 MediaPipe 对**分析流原始帧**（通常 4:3）检测，归一化到该帧的
+ *  0..1 坐标系；而 [PreviewView]（FILL_START + COMPATIBLE）把**预览流**拉伸填满
+ *  并裁切，可见区域由 [crop]（`PreviewView.getPreviewCrop()`，源帧归一化矩形）描述。
+ *  因此不能简单用 `lm.x * canvasW`，否则骨架与真人身体会错位。
+ *
+ *  映射规则（参考 vmalikov/pose-detection-android 的 crop 映射做法）：
+ *   1. 源帧归一化点 (lx, ly) → 像素 = (crop.left + lx * crop.width) * canvasW
+ *   2. 前置摄像头（[mirror]）：Canvas 与 PreviewView 一样都水平镜像，
+ *      检测前已将分析帧镜像，故检测坐标即画面坐标，仅对 canvas 做同样的
+ *      水平翻转，使骨架与预览镜像画面严格重合。
+ *
+ * @param landmarks 归一化（0..1，源帧坐标）33 关键点
+ * @param crop      PreviewView 的可见裁切矩形（源帧归一化坐标），null 时按全帧处理
+ * @param mirror    是否水平镜像（前置摄像头传 true）
  */
 @Composable
 fun SkeletonOverlay(
@@ -40,17 +55,22 @@ fun SkeletonOverlay(
     lineColor: Color = Color(0xFF22D3EE),
     jointColor: Color = Color(0xFFFFD54A),
     lineStrokeDp: Dp = 4.dp,
-    /** 前置摄像头为镜像画面，骨骼需水平翻转以与预览方向一致。 */
+    crop: RectF? = null,
     mirror: Boolean = false
 ) {
     val byIndex = rememberByIndex(landmarks)
+    val c = crop ?: RectF(0f, 0f, 1f, 1f)
     Canvas(modifier = modifier.fillMaxSize()) {
         if (byIndex.isEmpty()) return@Canvas
         val w = size.width
         val h = size.height
         fun toPoint(lm: Landmark): Offset {
-            val x = if (mirror) (1f - lm.x) * w else lm.x * w
-            return Offset(x, lm.y * h)
+            // 1) 源帧归一化 → 画布像素（含裁切）
+            var px = (c.left + lm.x * c.width()) * w
+            val py = (c.top + lm.y * c.height()) * h
+            // 2) 前置镜像
+            if (mirror) px = w - px
+            return Offset(px, py)
         }
         // 连线
         BONES.forEach { (a, b) ->

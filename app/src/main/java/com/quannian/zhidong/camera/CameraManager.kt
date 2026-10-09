@@ -2,6 +2,7 @@ package com.quannian.zhidong.camera
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -58,6 +59,39 @@ class CameraManager(
     /** 已绑定的 PreviewView 引用（切换 / 重绑时复用）。 */
     private var viewRef: PreviewView? = null
 
+    /**
+     * 计算当前 PreviewView 的可见裁切（源帧归一化 0..1 矩形），供 [SkeletonOverlay] 把
+     * 归一化关键点映射到画布正确位置（P0 §2 骨架严格重合）。
+     *
+     *  基于 [androidx.camera.core.ViewPort]（宽高比 + 旋转 + scaleType + layoutDirection）
+     *  推导，跨 CameraX 版本稳定，不依赖内部 `previewCrop` 字段。
+     *  返回 null 表示无法计算（ViewPort 未就绪），UI 回退全帧 0..1。
+     */
+    fun visibleCrop(view: PreviewView): RectF? {
+        val vp = try { view.getViewPort() } catch (_: Exception) { null } ?: return null
+        val viewW = view.width.toFloat(); val viewH = view.height.toFloat()
+        if (viewW <= 0f || viewH <= 0f) return null
+        val ratio = vp.aspectRatio ?: return null
+        // 源帧宽高比（浮点）；旋转 90/270 时宽高互换
+        val srcW = ratio.numerator.toFloat()
+        val srcH = ratio.denominator.toFloat()
+        val sourceAspect = if (vp.rotation == 90 || vp.rotation == 270) srcH / srcW else srcW / srcH
+        val viewAspect = viewW / viewH
+        return when (vp.scaleType) {
+            androidx.camera.core.ViewPort.FIT -> RectF(0f, 0f, 1f, 1f)
+            else -> {
+                // FILL_START / FILL_CENTER / FILL_END：源帧拉伸填满，可见区为源帧中央
+                if (sourceAspect > viewAspect) {
+                    val visibleH = viewAspect / sourceAspect
+                    RectF(0f, (1f - visibleH) / 2f, 1f, (1f + visibleH) / 2f)
+                } else {
+                    val visibleW = sourceAspect / viewAspect
+                    RectF((1f - visibleW) / 2f, 0f, (1f + visibleW) / 2f, 1f)
+                }
+            }
+        }
+    }
+
     private fun getProvider(): ProcessCameraProvider? {
         if (initializedProvider) return provider
         provider = try {
@@ -72,10 +106,13 @@ class CameraManager(
 
     /** 启动相机并**后台**初始化姿态模型（不阻塞主线程）。 */
     fun start(view: PreviewView) {
+        // 幂等保护：UI 重组 / AndroidView 可能重复 start，避免双重绑定 use case
         if (running) return
+        Log.i(tag, "start() called (running=false, facingBack=$facingBack)")
         viewRef = view
         val provider = getProvider()
         if (provider == null) {
+            Log.w(tag, "ProcessCameraProvider 为 null，无法启动相机")
             onFrame(emptyList())
             onPoseReady(false)
             return
@@ -91,7 +128,9 @@ class CameraManager(
         // 后台加载姿态模型，避免 5.7MB 模型阻塞预览。
         onPoseReady(false)
         poseInitExecutor.execute {
+            Log.d(tag, "开始后台初始化 PoseDetector")
             val ok = poseDetector.init()
+            Log.i(tag, "PoseDetector init 结果: $ok")
             runOnUiThread { onPoseReady(ok) }
         }
     }
@@ -157,7 +196,12 @@ class CameraManager(
             return
         }
         val resized = scaleDown(bitmap, 720)
-        val landmarks = poseDetector.detect(resized).toLandmarks()
+        // 前置摄像头画面是镜像的（用户在屏幕里看到自己像照镜子），
+        // 关键点需在镜像后的坐标系里检测，骨架才能与画面严格重合；
+        // 检测坐标与预览镜像后的画面坐标一致，SkeletonOverlay 不需再翻转。
+        val analysis = if (!facingBack) poseDetector.mirrorHorizontal(resized) else resized
+        val landmarks = poseDetector.detect(analysis).toLandmarks()
+        if (analysis !== resized) analysis.recycle()
         if (resized !== bitmap) resized.recycle()
         bitmap.recycle()
         onFrame(landmarks)

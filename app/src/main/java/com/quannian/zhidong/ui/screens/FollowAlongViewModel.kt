@@ -1,10 +1,13 @@
 package com.quannian.zhidong.ui.screens
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import com.quannian.zhidong.analyzer.ExerciseAnalyzer
 import com.quannian.zhidong.analyzer.ExerciseAnalyzerFactory
+import com.quannian.zhidong.db.TrainingRepository
 import com.quannian.zhidong.model.AgeGroup
 import com.quannian.zhidong.model.ErrorType
 import com.quannian.zhidong.model.Landmark
@@ -33,7 +36,11 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
 
     private val exercise = resolveExercise(analysisKind)
     private val targetReps = targetReps
-    private val analyzer: ExerciseAnalyzer = ExerciseAnalyzerFactory.forKey(analysisKind)
+    /**
+     * 每个训练 Session 用**全新**的分析器实例（P0：避免跨场次共享有状态分析器导致计数错位）。
+     * 工厂改为 [freshFor] 每次 new 一个新实例；[startSession] 时再 reset 一次确保干净起点。
+     */
+    private val analyzer: ExerciseAnalyzer = ExerciseAnalyzerFactory.freshFor(analysisKind)
     private val ageProfile: AgeProfile = AgeProfile.forAge(exercise.ageGroup)
 
     // ---- 实时状态（Compose 直接收集） ----
@@ -47,6 +54,10 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
     private val _subLabel = MutableStateFlow("")
     val subLabel: StateFlow<String> = _subLabel
 
+    /** 当前"式/小节"序号（八段锦 0..7、太极 0..4），供教练动作引擎选择对应姿态。 */
+    private val _moveIndex = MutableStateFlow(0)
+    val moveIndex: StateFlow<Int> = _moveIndex
+
     private val _score = MutableStateFlow(0)
     val score: StateFlow<Int> = _score
 
@@ -55,6 +66,10 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
 
     private val _corrections = MutableStateFlow<List<String>>(emptyList())
     val corrections: StateFlow<List<String>> = _corrections
+
+    /** 当前帧命中的错误类型集合（喂给 LocalCoachProvider 生成数字人话术）。 */
+    private val _currentErrors = MutableStateFlow<Set<ErrorType>>(emptySet())
+    val currentErrors: StateFlow<Set<ErrorType>> = _currentErrors
 
     /** AI 姿态识别是否就绪（MediaPipe 模型加载完成）。 */
     private val _poseReady = MutableStateFlow(false)
@@ -81,6 +96,24 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
 
     init {
         startTime = System.currentTimeMillis()
+        // 进入跟练页 = 新 Session，保证分析器从干净状态开始（P0 reset）
+        analyzer.reset()
+    }
+
+    /**
+     * 结束一次训练 Session（页面退出 / 返回时调用）：
+     *  释放分析器状态、停止 TTS，避免下一场被污染。
+     */
+    fun onSessionEnd() {
+        analyzer.reset()
+        repCountInternal = 0
+        seenErrors = mutableSetOf()
+        depthSum = 0f; depthSamples = 0
+        postureSteadySum = 0f; symSteadySum = 0f; rhythmSum = 0f
+        _repCount.value = 0
+        _currentErrors.value = emptySet()
+        _coachState.value = CoachState.IDLE
+        startTime = System.currentTimeMillis()
     }
 
     /** 处理一帧（来自 CameraManager 的 onFrame）。 */
@@ -94,6 +127,7 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
 
             _phase.value = result.phase
             if (result.subLabel != null) _subLabel.value = result.subLabel
+            _moveIndex.value = result.moveIndex
 
             if (result.phase.isRep) {
                 repCountInternal++
@@ -101,6 +135,10 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
             }
 
             seenErrors += result.errors
+            // 当前帧真实错误类型（喂给数字人话术 / LocalCoachProvider）
+            val frameErrors: Set<ErrorType> = result.errors.toSet().filter { it != ErrorType.NO_PERSON }.toSet()
+            _currentErrors.value = frameErrors
+
             val breakdown = ScoreCalculator.calculate(
                 repCount = repCountInternal,
                 targetReps = targetReps,
@@ -113,10 +151,9 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
             _score.value = breakdown.overall
             _stateText.value = ScoreCalculator.stateOf(breakdown.overall, ageProfile)
 
-            val current = CorrectionEngine.suggestions(result.errors.toSet(), 3)
+            val current = CorrectionEngine.suggestions(frameErrors, 3)
             _corrections.value = if (current.isNotEmpty()) current
             else _corrections.value.takeLast(1)
-
             // 数字人教练状态驱动：有纠错 → CORRECT；完成一次 → GOOD；演示中 → DEMO
             _coachState.value = when {
                 result.errors.isNotEmpty() -> CoachState.CORRECT
@@ -130,13 +167,31 @@ class FollowAlongViewModel(analysisKind: String?, targetReps: Int) : ViewModel()
             rhythmSum += result.rhythm
         } else {
             _stateText.value = "未检测到人体，请站到摄像头前"
+            _currentErrors.value = emptySet()
         }
     }
 
     private var lastFrame: PoseFrame? = null
 
-    /** 结算：生成训练报告。 */
-    fun finishReport(): TrainingReport {
+    /** 结算：生成训练报告，并**立即**持久化到 Room（不依赖报告页落库，P0 §9）。 */
+    fun finishReport(context: android.content.Context): TrainingReport {
+        val report = buildReport()
+        // 结束训练瞬间落库：即使报告页出问题，数据已保存。
+        viewModelScope.launch {
+            try {
+                TrainingRepository(context.applicationContext).save(
+                    report,
+                    exerciseId = exercise.id,
+                    exerciseName = report.exerciseName
+                )
+            } catch (_: Exception) {
+                // 持久化失败不影响报告展示
+            }
+        }
+        return report
+    }
+
+    private fun buildReport(): TrainingReport {
         val repCount = repCountInternal
         val target = targetReps
         val avgDepth = if (depthSamples > 0) depthSum / depthSamples else 0f

@@ -15,6 +15,7 @@ import com.quannian.zhidong.model.Landmark
 import com.quannian.zhidong.model.PoseFrame
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -226,6 +227,37 @@ class ExerciseAnalyzerTest {
         a.analyze(standingFrame(0), null)
         val up = a.analyze(PoseFrame(1, stretchLandmarks(true), true), null)
         assertTrue("should be 上举中", up.phase.phase.contains("上举"))
+    }
+
+    // ============ P0：分析器跨场次隔离（工厂 freshFor） ============
+
+    @Test
+    fun `freshFor returns independent instances so a new session does not inherit state`() {
+        // 模拟"上一场训练"：实例 A 已经计了 3 次深蹲
+        val sessionA = ExerciseAnalyzerFactory.freshFor("squat") as SquatAnalyzer
+        sessionA.analyze(standingFrame(0), null)
+        sessionA.analyze(PoseFrame(1, squatLandmarks(70f), true), null) // down → bottom
+        sessionA.analyze(PoseFrame(2, standingLandmarks(), true), null) // up → 完成一次
+
+        // 新 Session：工厂应返回一个**全新**实例，不继承 sessionA 的状态
+        val sessionB = ExerciseAnalyzerFactory.freshFor("squat")
+        assertNotSame("每次 freshFor 必须是不同实例", sessionA, sessionB)
+
+        // 新实例从干净起点开始：站立帧不应报 isRep（上一场的中间态没被带过来）
+        val fresh = sessionB.analyze(PoseFrame(3, standingLandmarks(), true), null)
+        assertFalse("新 Session 站立帧不应误判为完成一次", fresh.phase.isRep)
+    }
+
+    @Test
+    fun `reset clears rep state so repeated analyze does not double count`() {
+        val a = SquatAnalyzer()
+        a.analyze(standingFrame(0), null)
+        a.analyze(PoseFrame(1, squatLandmarks(70f), true), null)
+        a.analyze(PoseFrame(2, standingLandmarks(), true), null) // 1 次
+        a.reset()
+        // reset 后重新走站立：minKnee 已清零，phase 回到站立准备
+        val afterReset = a.analyze(standingFrame(3), null)
+        assertEquals("reset 后应回到站立", "站立准备", afterReset.phase.phase)
     }
 
     // ============================================================

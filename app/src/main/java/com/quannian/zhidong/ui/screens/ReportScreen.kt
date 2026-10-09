@@ -63,22 +63,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ReportScreen(
     modifier: Modifier = Modifier,
-    onAgain: () -> Unit,
+    onAgain: (String) -> Unit,
     onHome: () -> Unit
 ) {
     val report = remember { ReportChannel.take() } ?: return
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    // 自动持久化到 Room（后台线程，不阻塞 UI）
-    LaunchedEffect(report) {
-        withContext(Dispatchers.IO) {
-            try {
-                TrainingRepository(context.applicationContext)
-                    .save(report, exerciseId = ExerciseRepository.all().firstOrNull { it.name == report.exerciseName }?.id ?: "", report.exerciseName)
-            } catch (_: Exception) {
-            }
-        }
-    }
+    // P0 §9：训练结束瞬间已在 FollowAlongViewModel.finishReport 中落库 Room，
+    // 报告页不再重复持久化（避免重复插入），只做展示。
 
     val coach = remember(report) { LocalCoachProvider }
     val summary = remember(report) { if (report.coachSummary.isNotBlank()) report.coachSummary else coach.generateSummary(report) }
@@ -122,6 +114,11 @@ fun ReportScreen(
                 MetricCard("综合评分", "${report.overallScore}", Modifier.weight(1f))
                 MetricCard("动作质量", qualityLabel, Modifier.weight(1f))
             }
+        }
+
+        // 改善前后对比（spec §二十：视频"改善前" → 本次跟练"改善后"）
+        item {
+            BeforeAfterCard(report.overallScore)
         }
 
         // 四维细分
@@ -201,7 +198,7 @@ fun ReportScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Palette.accent, RoundedCornerShape(16.dp))
-                        .clickable(onClick = onAgain)
+                        .clickable { onAgain(lastExerciseId(report)) }
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -233,6 +230,52 @@ private fun MetricCard(label: String, value: String, modifier: Modifier) {
         Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Palette.accent)
     }
 }
+
+/**
+ * 改善前后对比（spec §二十）：
+ *  若本次是"视频诊断 → 数字教练纠正 → 再次跟练"，则显示 改善前(视频分) → 改善后(本次分)。
+ *  读 [VideoAnalysisChannel] 里最近一次视频分析的 overallScore；没有则不显示（普通跟练不出现）。
+ */
+@Composable
+private fun BeforeAfterCard(afterScore: Int) {
+    val before = remember {
+        com.quannian.zhidong.video.VideoAnalysisChannel.result?.beforeScore
+    }
+    if (before == null) return
+
+    val delta = afterScore - before
+    val improved = delta > 0
+    Card() {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("📈", fontSize = 20.sp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text("改善前后对比", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("改善前 ${before}", fontSize = 13.sp, color = Palette.inkSoft)
+                    Text("→", fontSize = 16.sp, color = Palette.ink, fontWeight = FontWeight.Bold)
+                    Text("改善后 $afterScore", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (improved) Palette.good else Palette.bad)
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (improved) Palette.good.copy(alpha = 0.12f) else Palette.bad.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "提升 ${if (delta > 0) "+" else ""}$delta",
+                    fontSize = 15.sp, fontWeight = FontWeight.ExtraBold,
+                    color = if (improved) Palette.good else Palette.bad
+                )
+            }
+        }
+    }
+}
+
+/** 把报告里的动作名解析成上一场跟练页的运动 id（用于"再次训练"路由）。 */
+private fun lastExerciseId(report: com.quannian.zhidong.model.TrainingReport): String =
+    ExerciseRepository.all().firstOrNull { it.name == report.exerciseName }?.id ?: ""
 
 /** 四维细分行（标签 + 进度条 + 数值）。 */
 @Composable

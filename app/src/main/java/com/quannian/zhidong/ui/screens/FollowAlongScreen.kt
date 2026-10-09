@@ -2,6 +2,7 @@ package com.quannian.zhidong.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.RectF
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,10 +29,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,16 +46,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.runtime.DisposableEffect
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.quannian.zhidong.camera.CameraManager
 import com.quannian.zhidong.coach.LocalCoachProvider
+import com.quannian.zhidong.model.ErrorType
 import com.quannian.zhidong.model.Exercise
 import com.quannian.zhidong.pose.PoseDetector
 import com.quannian.zhidong.repository.ExerciseRepository
 import com.quannian.zhidong.ui.components.Card
-import com.quannian.zhidong.ui.components.CoachAvatar
+import com.quannian.zhidong.ui.components.CoachMotionView
 import com.quannian.zhidong.ui.components.CoachState
 import com.quannian.zhidong.ui.components.Pill
 import com.quannian.zhidong.ui.components.SkeletonOverlay
@@ -128,19 +133,43 @@ fun FollowAlongScreen(
 
     // TTS 语音教练开关（默认关闭；用户可打开）
     var voiceOn by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(voiceOn) {
+    LaunchedEffect(voiceOn) {
         com.quannian.zhidong.tts.TtsCoach.setVoiceEnabled(voiceOn)
         if (!voiceOn) com.quannian.zhidong.tts.TtsCoach.stop()
     }
 
-    // 实时纠错 → 数字人话术（本地教练，引用当前分数/次数）
-    val coachSpeech = remember(corrections, repCount, score) {
-        LocalCoachProvider.correctionFor(ex.name, ageId, emptySet(), score).firstOrNull()
+    // 实时纠错 → 数字人话术（本地教练，引用当前分数/次数 + 当前帧真实错误类型）
+    val currentErrors by vm.currentErrors.collectAsState()
+    val coachSpeech = remember(currentErrors, repCount, score) {
+        LocalCoachProvider.correctionFor(ex.name, ageId, currentErrors, score).firstOrNull()
             ?: "保持节奏，${if (repCount >= exTarget) "做得很好！" else "继续加油！"}"
     }
-    // 语音教练：话术变化时朗读（仅在 voiceOn 时生效）
-    androidx.compose.runtime.LaunchedEffect(coachSpeech, voiceOn, repCount) {
-        if (voiceOn) com.quannian.zhidong.tts.TtsCoach.speak(coachSpeech)
+    // 语音教练：话术变化时朗读（仅在 voiceOn 时生效；debounce + 相同话术不重播）
+    var lastSpokenSpeech by remember { mutableStateOf("") }
+    LaunchedEffect(coachSpeech, voiceOn, repCount) {
+        if (voiceOn && coachSpeech != lastSpokenSpeech) {
+            com.quannian.zhidong.tts.TtsCoach.speak(coachSpeech)
+            lastSpokenSpeech = coachSpeech
+        }
+    }
+    // 数字人动作引擎：把 (运动, 阶段, 教练状态, 年龄, 式序) 算成一个具体关节姿态（spec §二十/§二十一）
+    val moveIndex by vm.moveIndex.collectAsState()
+    val coachPose = remember(phase.phase, coachState, ageId, ex.analysisKind, moveIndex) {
+        com.quannian.zhidong.ui.components.CoachMotionEngine.poseFor(
+            exerciseKey = ex.analysisKind,
+            phase = phase.phase,
+            state = coachState,
+            ageId = ageId,
+            moveIndex = moveIndex
+        )
+    }
+    // 页面退出时停止语音
+    DisposableEffect(Unit) {
+        onDispose {
+            com.quannian.zhidong.tts.TtsCoach.stop()
+            com.quannian.zhidong.tts.TtsCoach.setVoiceEnabled(false)
+            vm.onSessionEnd()
+        }
     }
 
     LazyColumn(
@@ -185,47 +214,75 @@ fun FollowAlongScreen(
             }
         }
 
-        // 数字人 + 摄像头（并排，摄像头为主区域）
+        // 数字人教练（大尺寸动作演示，占约 30% 页面高度，spec §十九）
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(ageSoft, RoundedCornerShape(20.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // 数字人教练面板
-                Column(
-                    modifier = Modifier
-                        .weight(0.36f)
-                        .aspectRatio(0.82f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(ageSoft, RoundedCornerShape(16.dp))
-                        .padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    CoachAvatar(
-                        ageId = ageId,
-                        size = 96.dp,
-                        coachState = coachState
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text("智能教练", fontSize = 11.sp, color = Palette.inkSoft)
-                    if (subLabel.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
-                        Pill(subLabel, ageColor)
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // 左侧：大尺寸数字人动作示范（Pose Sprite 帧序列，按 phase 实时驱动）
+                    Column(
+                        modifier = Modifier.weight(0.5f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        com.quannian.zhidong.ui.components.CoachSpriteView(
+                            ageId = ageId,
+                            exerciseKey = ex.analysisKind,
+                            figureSizePx = 440,
+                            livePose = coachPose,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    // 右侧：当前阶段 + 数字人话术
+                    Column(
+                        modifier = Modifier.weight(0.5f).padding(horizontal = 12.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text("智能教练 · 示范", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = ageColor)
+                        Spacer(Modifier.height(8.dp))
+                        if (subLabel.isNotBlank()) {
+                            Pill(subLabel, ageColor)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Text(
+                            "当前阶段：${phase.phase}",
+                            fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.ink
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        // 数字人纠错/鼓励话术（真实 errors 驱动）
+                        if (corrections.isEmpty()) {
+                            Text("✓ 动作标准，继续保持！", fontSize = 13.sp, color = Palette.good)
+                        } else {
+                            corrections.firstOrNull()?.let {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("💡", fontSize = 13.sp)
+                                    Text(it, fontSize = 13.sp, color = Palette.ink, modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
                 }
-                // 摄像头 + 骨骼（主区域）
-                CameraPane(
-                    cameraManager = cameraManager,
-                    landmarks = landmarks,
-                    facingBack = facingBack,
-                    poseReady = poseReady,
-                    hasPermission = hasPermission,
-                    onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
-                    modifier = Modifier.weight(0.64f)
-                )
             }
+        }
+
+        // 摄像头 + 骨骼（主区域）
+        item {
+            CameraPane(
+                cameraManager = cameraManager,
+                landmarks = landmarks,
+                facingBack = facingBack,
+                poseReady = poseReady,
+                hasPermission = hasPermission,
+                onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         // 数据看板：次数 + 得分
@@ -293,7 +350,7 @@ fun FollowAlongScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(ageColor, RoundedCornerShape(16.dp))
-                    .clickable { cameraManager.release(); onFinish(vm.finishReport()) }
+                    .clickable { cameraManager.release(); onFinish(vm.finishReport(context)) }
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -304,7 +361,7 @@ fun FollowAlongScreen(
     }
 }
 
-/** 摄像头 + 骨骼画面区块。weight 由调用方在 RowScope 里应用。 */
+/** 摄像头 + 骨骼画面区块。调用方给 modifier（fillMaxWidth 等）。 */
 @Composable
 private fun CameraPane(
     cameraManager: CameraManager,
@@ -317,13 +374,15 @@ private fun CameraPane(
 ) {
     Box(
         modifier = modifier
-            .aspectRatio(0.82f)
+            .aspectRatio(0.6f)
             .clip(RoundedCornerShape(18.dp))
             .background(Color(0xFF10182A), RoundedCornerShape(18.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (hasPermission) {
             Box(Modifier.fillMaxSize()) {
+                var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
+                var crop: RectF by remember { mutableStateOf(RectF(0f, 0f, 1f, 1f)) }
                 AndroidView(
                     factory = { ctx ->
                         val pv = PreviewView(ctx)
@@ -332,15 +391,29 @@ private fun CameraPane(
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
                         cameraManager.start(pv)
+                        previewViewRef = pv
                         pv
                     },
                     modifier = Modifier.fillMaxSize(),
-                    onRelease = { cameraManager.release() }
+                    onRelease = { cameraManager.release(); previewViewRef = null }
                 )
+                // 动态计算 PreviewView 可见裁切（FILL_START + 前后摄像头 + 旋转），
+                // 保证骨架与真人身体严格重合；未拿到前用全帧兜底。
+                LaunchedEffect(previewViewRef, facingBack) {
+                    val view = previewViewRef ?: return@LaunchedEffect
+                    var tries = 0
+                    while (true) {
+                        val c = cameraManager.visibleCrop(view)
+                        if (c != null) { crop = c; break }
+                        if (++tries > 60) break
+                        kotlinx.coroutines.delay(50)
+                    }
+                }
                 if (landmarks.isNotEmpty()) {
                     SkeletonOverlay(
                         landmarks = landmarks,
                         modifier = Modifier.fillMaxSize(),
+                        crop = crop,
                         mirror = !facingBack
                     )
                 }

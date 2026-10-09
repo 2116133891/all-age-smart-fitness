@@ -96,7 +96,13 @@ class TaiChiAnalyzer : ExerciseAnalyzer {
             posture = posture,
             symmetry = sym,
             errors = errors,
-            subLabel = phase.phase
+            subLabel = phase.phase,
+            moveIndex = when {
+                done -> 4  // 收势
+                state == "moving" -> 3  // 重心转移 / 云手
+                state == "hold" -> 2    // 推掌保持
+                else -> 0               // 起势
+            }
         )
     }
 

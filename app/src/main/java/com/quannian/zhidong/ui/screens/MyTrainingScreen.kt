@@ -2,6 +2,7 @@ package com.quannian.zhidong.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -114,7 +115,8 @@ fun MyTrainingScreen(
             Card() {
                 Text("最近 7 天成长趋势", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
                 Spacer(Modifier.height(10.dp))
-                TrendChart(stats = dailyStats)
+                val dayCount = dailyStats.count { it.sessions > 0 }
+                TrendChart(stats = dailyStats, hasData = dayCount > 0, dayCount = dayCount)
             }
         }
 
@@ -156,9 +158,15 @@ private fun StatCard(label: String, value: String, modifier: Modifier) {
 /**
  * 7 天成长趋势折线图（Canvas 自绘，对照 spec §22）。
  *  横轴 = 最近 7 天（缺失用 0 补位），纵轴 = 平均得分 0-100。
+ *  [hasData] 区分"有数据"与"无数据"两种空态，避免把单天/零天画成假增长曲线。
  */
 @Composable
-private fun TrendChart(stats: List<DailyStat>, modifier: Modifier = Modifier) {
+private fun TrendChart(
+    stats: List<DailyStat>,
+    modifier: Modifier = Modifier,
+    hasData: Boolean = false,
+    dayCount: Int = 0
+) {
     val days = 7
     val data = remember(stats) {
         val byDay = stats.associate { it.day to it }
@@ -168,6 +176,22 @@ private fun TrendChart(stats: List<DailyStat>, modifier: Modifier = Modifier) {
             byDay[dayKey]?.avgScore?.toFloat() ?: 0f
         }
     }
+
+    if (!hasData) {
+        // 空态：无数据 / 仅 1 天数据时，不画折线（避免误导为"大幅增长"）
+        Box(
+            modifier = modifier.fillMaxWidth().height(180.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (dayCount == 1) {
+                Text("当前只有 1 天记录，继续训练会看到成长曲线", fontSize = 13.sp, color = Palette.inkSoft)
+            } else {
+                Text("暂无训练数据，完成 1 次跟练后自动记录", fontSize = 13.sp, color = Palette.inkSoft)
+            }
+        }
+        return
+    }
+
     Canvas(modifier = modifier.fillMaxWidth().height(180.dp)) {
         val w = size.width
         val h = size.height
@@ -178,26 +202,39 @@ private fun TrendChart(stats: List<DailyStat>, modifier: Modifier = Modifier) {
         val plotW = w - padL - padR
         val plotH = h - padT - padB
 
+        // 网格
         for (v in 0..4) {
             val yy = padT + plotH * (1 - v / 4f)
             drawLine(Color(0xFFE4E9F2), Offset(padL, yy), Offset(w - padR, yy), strokeWidth = 1f)
         }
 
-        if (data.isNotEmpty()) {
-            val pts = data.mapIndexed { i, score ->
-                val xx = padL + if (data.size > 1) plotW * i / (data.size - 1) else plotW / 2f
-                val yy = padT + plotH * (1 - score / 100f)
-                Offset(xx, yy)
+        // 只显示有数据的天；无数据天跳过，不画假线
+        val realPts = mutableListOf<Offset>()
+        val dayIdxOf = IntArray(days) { -1 } // 有数据的天在 realPts 里的位置
+        var ptCount = 0
+        for (i in 0 until days) {
+            if (data[i] > 0f) {
+                val xx = padL + plotW * i / (days - 1)
+                val yy = padT + plotH * (1 - data[i] / 100f)
+                dayIdxOf[i] = ptCount
+                realPts += Offset(xx, yy)
+                ptCount++
             }
-            for (i in 0 until pts.size - 1) {
-                drawLine(Palette.accent, pts[i], pts[i + 1], strokeWidth = 3f, cap = StrokeCap.Round)
+        }
+
+        // 相邻有数据的天才连线（中间空天 → 断线）
+        for (i in 0 until days - 1) {
+            if (data[i] > 0f && data[i + 1] > 0f) {
+                val pa = realPts[dayIdxOf[i]]
+                val pb = realPts[dayIdxOf[i + 1]]
+                drawLine(Palette.accent, pa, pb, strokeWidth = 3f, cap = StrokeCap.Round)
             }
-            pts.forEach { p ->
-                drawCircle(Palette.accent, 5f, p)
-                drawCircle(Color.White, 2.5f, p)
-            }
-        } else {
-            drawLine(Color(0xFFE4E9F2), Offset(padL, padT + plotH / 2), Offset(w - padR, padT + plotH / 2), strokeWidth = 2f)
+        }
+
+        // 数据点
+        realPts.forEach { p ->
+            drawCircle(Palette.accent, 5f, p)
+            drawCircle(Color.White, 2.5f, p)
         }
     }
 }

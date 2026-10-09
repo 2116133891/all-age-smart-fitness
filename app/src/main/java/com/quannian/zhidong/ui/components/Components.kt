@@ -9,7 +9,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -36,6 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import com.quannian.zhidong.R
 import com.quannian.zhidong.model.AgeGroup
 import com.quannian.zhidong.ui.theme.Palette
 import kotlin.math.sin
@@ -69,9 +78,6 @@ import kotlin.math.sin
 //    coachState - 当前教练状态
 // ============================================================================
 
-/** 教练状态。 */
-enum class CoachState { IDLE, INTRO, PREPARE, DEMO, COUNTDOWN, GOOD, CORRECT, REST, FINISH }
-
 /**
  * 数字教练（全龄）。
  *
@@ -81,8 +87,15 @@ enum class CoachState { IDLE, INTRO, PREPARE, DEMO, COUNTDOWN, GOOD, CORRECT, RE
  *
  *  颜色使用 [Palette.ageColor]。
  */
-@Composable
-fun CoachAvatar(
+    /** PNG 数字人资源 id（res/drawable/coach_*）；未知年龄段返回 0 触发 Canvas 回退。 */
+    private fun coachAssetId(ageId: String): Int = when (ageId) {
+        "child" -> R.drawable.coach_child
+        "senior" -> R.drawable.coach_senior
+        else -> R.drawable.coach_youth
+    }
+
+    @Composable
+    fun CoachAvatar(
     ageId: String,
     modifier: Modifier = Modifier,
     size: Dp = 120.dp,
@@ -99,25 +112,9 @@ fun CoachAvatar(
         else -> AgeGroup.YOUTH
     }
 
-    // 呼吸动画（IDLE/REST 用，幅度按年龄不同：儿童活泼、银龄沉稳）
-    val transition = rememberInfiniteTransition(label = "breath")
-    val breath = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = when (ageGroup) {
-                    AgeGroup.CHILD -> 900   // 活泼
-                    AgeGroup.YOUTH -> 1400  // 中速
-                    AgeGroup.SENIOR -> 2400 // 沉稳
-                }
-            ),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "b"
-    )
-    val breathVal = breath.value // 0..1 呼吸
-
+    // Phase 1：静态站立 —— 移除旧的呼吸/上下蹦跳（bob）动画。
+    //  首页 / Age / Exercise / Report 等页面人物"站在那"，不再无意义上下跳。
+    //  状态指示保留为静置圆点（GOOD 绿 / CORRECT 橙 / DEMO 年龄色）。
     Box(
         modifier = modifier
             .size(size)
@@ -126,27 +123,34 @@ fun CoachAvatar(
             .border(1.dp, main.copy(alpha = 0.18f), RoundedCornerShape(24.dp)),
         contentAlignment = Alignment.Center
     ) {
-        val drawSize = size * 0.72f
-        Canvas(modifier = Modifier.size(drawSize)) {
-            when (ageGroup) {
-                AgeGroup.CHILD -> drawChildCoach(
-                    main = main,
-                    state = coachState,
-                    breath = breathVal,
-                    animProgress = animationProgress
-                )
-                AgeGroup.YOUTH -> drawYouthCoach(
-                    main = main,
-                    state = coachState,
-                    breath = breathVal,
-                    animProgress = animationProgress
-                )
-                AgeGroup.SENIOR -> drawSeniorCoach(
-                    main = main,
-                    state = coachState,
-                    breath = breathVal,
-                    animProgress = animationProgress
-                )
+        // 主视觉：真实数字教练 PNG（静态站立），Canvas 矢量人物仅作资源缺失时的回退。
+        val coachRes = coachAssetId(ageId)
+        if (coachRes != 0) {
+            Image(
+                painter = painterResource(coachRes),
+                contentDescription = "数字人教练",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(size * 0.94f)
+                    .clip(RoundedCornerShape(24.dp)),
+                alpha = 0.98f
+            )
+            // 状态指示：GOOD 绿圈 / CORRECT 橙圈 / DEMO 蓝圈（静置，不蹦跳）
+            when (coachState) {
+                CoachState.GOOD -> drawStatusDot(Color(0xFF21B57A), size)
+                CoachState.CORRECT -> drawStatusDot(Color(0xFFF5A623), size)
+                CoachState.DEMO, CoachState.PREPARE -> drawStatusDot(main, size)
+                CoachState.COUNTDOWN -> drawStatusDot(main, size)
+                else -> {}
+            }
+        } else {
+            val drawSize = size * 0.72f
+            Canvas(modifier = Modifier.size(drawSize)) {
+                when (ageGroup) {
+                    AgeGroup.CHILD -> drawChildCoach(main, coachState, 0f, 0f)
+                    AgeGroup.YOUTH -> drawYouthCoach(main, coachState, 0f, 0f)
+                    AgeGroup.SENIOR -> drawSeniorCoach(main, coachState, 0f, 0f)
+                }
             }
         }
     }
@@ -603,6 +607,19 @@ private fun DrawScope.drawSeniorCoach(
 // ============================================================================
 
 private const val PI = 3.14159265f
+
+/** 数字人状态指示点（叠加在 PNG 人物右上角）：GOOD 绿 / CORRECT 橙 / DEMO 年龄色。 */
+@Composable
+private fun BoxScope.drawStatusDot(color: Color, size: Dp) {
+    Box(
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(6.dp)
+            .size(size * 0.22f)
+            .clip(RoundedCornerShape(50.dp))
+            .background(color)
+    )
+}
 
 /** 圆角线段。 */
 private fun DrawScope.drawRoundedLine(

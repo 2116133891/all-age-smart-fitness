@@ -60,9 +60,9 @@ class BaduanjinAnalyzer : ExerciseAnalyzer {
 
         val posture = if (torsoLeaning(lm) < 25f) 1f else 0.7f
         val sym = symmetry(lm)
-
+        val curMove = moveIndex
         return AnalysisResult(
-            phase = PhaseState("第${moveIndex + 1}式 · 保持中", false),
+            phase = PhaseState("第${curMove + 1}式 · 保持中", false),
             jointAngles = listOf(
                 JointAngle("当前式别进度", signal),
                 JointAngle("躯干稳定", posture * 100f)
@@ -74,7 +74,8 @@ class BaduanjinAnalyzer : ExerciseAnalyzer {
                 if (!frame.detected) add(ErrorType.NO_PERSON)
                 if (sym < 0.5f) add(ErrorType.UNSTABLE)
             },
-            subLabel = "八段锦 · 第${moveIndex + 1}式 ${MOVE_NAMES[moveIndex]}"
+            subLabel = "八段锦 · 第${curMove + 1}式 ${MOVE_NAMES[curMove]}",
+            moveIndex = curMove
         )
     }
 

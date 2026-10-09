@@ -29,7 +29,8 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                 composable("home") {
                     HomeScreen(
                         onPickAge = { nav.navigate("age/$it") },
-                        onMyTraining = { nav.navigate("training") }
+                        onMyTraining = { nav.navigate("training") },
+                        onAiDiagnose = { nav.navigate("videoPick") }
                     )
                 }
                 composable("age/{id}") { backStackEntry ->
@@ -70,15 +71,46 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                 }
                 composable("report") {
                     ReportScreen(
-                        onAgain = {
+                        onAgain = { exId ->
                             nav.popBackStack()
-                            nav.navigate("follow") {}
+                            nav.navigate("follow/$exId") {}
                         },
                         onHome = { nav.popBackStack("home", inclusive = false) }
                     )
                 }
                 composable("training") {
                     MyTrainingScreen(onBack = { nav.popBackStack() })
+                }
+
+                // AI 动作诊断（视频复盘闭环，spec §十一~§二十）
+                composable("videoPick") {
+                    VideoPickScreen(
+                        onBack = { nav.popBackStack() },
+                        onStartAnalysis = { kind, name, ageId, uriStr ->
+                            com.quannian.zhidong.video.VideoAnalysisChannel.pending(
+                                kind, name, ageId, uriStr
+                            )
+                            nav.navigate("videoAnalysis") { popUpTo("home") { inclusive = false } }
+                        }
+                    )
+                }
+                composable("videoAnalysis") {
+                    VideoAnalysisScreen(
+                        onBack = { nav.popBackStack() },
+                        onDone = { nav.navigate("videoReport") }
+                    )
+                }
+                composable("videoReport") {
+                    VideoReportScreen(
+                        onBack = { nav.popBackStack() },
+                        onCorrect = { exId, errorType ->
+                            // 数字教练针对纠正：进入教学页纠错模式（spec §十九），
+                            // 数字教练重新示范正确动作 + 纠正文案，然后"开始重新练习"。
+                            com.quannian.zhidong.video.VideoAnalysisChannel.markCorrection(exId, errorType)
+                            nav.popBackStack("home", inclusive = false)
+                            nav.navigate("coach/$exId")
+                        }
+                    )
                 }
             }
         }
