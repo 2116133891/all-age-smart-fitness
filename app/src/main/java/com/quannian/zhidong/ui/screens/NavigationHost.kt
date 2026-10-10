@@ -5,7 +5,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -15,7 +14,9 @@ import com.quannian.zhidong.ui.theme.QuanNingTheme
 
 /**
  * 全局导航。路由：
- *  splash → home → age(:child/:youth/:senior) → exercise → coach → followalong → report
+ *  splash → home → age(:child/:youth/:middle/:senior) → exercise → coach → follow → report
+ *  新增入口：onboarding（引导）、profile（年龄性别选择）、bodyTest（体测）、
+ *           assistant（AI 小助手）、wearable（运动手环）。
  */
 @Composable
 fun NavigationHost(modifier: Modifier = Modifier) {
@@ -24,13 +25,44 @@ fun NavigationHost(modifier: Modifier = Modifier) {
             val nav: NavHostController = rememberNavController()
             NavHost(navController = nav, startDestination = "splash") {
                 composable("splash") {
-                    SplashScreen(onDone = { nav.navigate("home") { popUpTo("splash") { inclusive = true } } })
+                    SplashScreen(
+                        onDone = {
+                            nav.navigate("onboarding") { popUpTo("splash") { inclusive = true } }
+                        }
+                    )
                 }
+
+                // 引导页（介绍 App 能做什么，三类人群各讲作用）
+                composable("onboarding") {
+                    OnboardingScreen(
+                        onFinish = {
+                            nav.navigate("profile") {
+                                popUpTo("onboarding") { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                // 年龄 + 性别选择（写入 ProfileStore，个性化）
+                composable("profile") {
+                    ProfileScreen(
+                        onBack = { nav.popBackStack() },
+                        onDone = {
+                            nav.navigate("home") {
+                                popUpTo("profile") { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
                 composable("home") {
                     HomeScreen(
                         onPickAge = { nav.navigate("age/$it") },
                         onMyTraining = { nav.navigate("training") },
-                        onAiDiagnose = { nav.navigate("videoPick") }
+                        onAiDiagnose = { nav.navigate("videoPick") },
+                        onAssistant = { nav.navigate("assistant") },
+                        onWearable = { nav.navigate("wearable") },
+                        onProfile = { nav.navigate("profile") }
                     )
                 }
                 composable("age/{id}") { backStackEntry ->
@@ -38,7 +70,14 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     AgeScreen(
                         id = id,
                         onBack = { nav.popBackStack() },
-                        onPickExercise = { exId -> nav.navigate("exercise/$exId") }
+                        onPickExercise = { exId -> nav.navigate("exercise/$exId") },
+                        onBodyTest = { nav.navigate("bodyTest") }
+                    )
+                }
+                composable("bodyTest") {
+                    BodyTestScreen(
+                        onBack = { nav.popBackStack() },
+                        onGoTrain = { nav.popBackStack() }
                     )
                 }
                 composable("exercise/{id}") { backStackEntry ->
@@ -82,6 +121,16 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     MyTrainingScreen(onBack = { nav.popBackStack() })
                 }
 
+                // AI 小助手（本地离线问答）
+                composable("assistant") {
+                    AssistantScreen(onBack = { nav.popBackStack() })
+                }
+
+                // 运动手环（演示连接 + 数据维度）
+                composable("wearable") {
+                    WearableScreen(onBack = { nav.popBackStack() })
+                }
+
                 // AI 动作诊断（视频复盘闭环，spec §十一~§二十）
                 composable("videoPick") {
                     VideoPickScreen(
@@ -104,8 +153,6 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     VideoReportScreen(
                         onBack = { nav.popBackStack() },
                         onCorrect = { exId, errorType ->
-                            // 数字教练针对纠正：进入教学页纠错模式（spec §十九），
-                            // 数字教练重新示范正确动作 + 纠正文案，然后"开始重新练习"。
                             com.quannian.zhidong.video.VideoAnalysisChannel.markCorrection(exId, errorType)
                             nav.popBackStack("home", inclusive = false)
                             nav.navigate("coach/$exId")

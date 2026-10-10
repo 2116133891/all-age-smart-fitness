@@ -4,9 +4,10 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * 设计系统：浅色科技风（白/浅灰底 + 青蓝科技色 + 卡片化）。
- * 三个年龄段各有主色，保持统一设计语言但区分气质：
- *  儿童 = 活泼橙/珊瑚（明亮运动感）
- *  青年 = 科技蓝/靛（现代简洁）
+ * 年龄段各有主色（儿童/青年/中年/银龄），保持统一设计语言但区分气质：
+ *  儿童 = 活泼珊瑚橙（明亮运动感）
+ *  青年 = 科技蓝（现代简洁）
+ *  中年 = 沉稳紫（高效·减压·平衡）
  *  银龄 = 沉稳青绿（稳重健康）
  */
 object Palette {
@@ -27,23 +28,26 @@ object Palette {
     val child = Color(0xFFF2713D)       // 珊瑚橙
     val childSoft = Color(0xFFFFEFE4)
     // 青年
-    val youth = Color(0xFF3B6BE8)       // 科技靛
+    val youth = Color(0xFF3B6BE8)       // 科技蓝
     val youthSoft = Color(0xFFE9F0FE)
+    // 中年
+    val middle = Color(0xFF8A56C8)      // 沉稳紫
+    val middleSoft = Color(0xFFF1E9FB)
     // 银龄
     val senior = Color(0xFF2E9C8E)      // 青绿
     val seniorSoft = Color(0xFFE4F4F0)
 
     fun ageColor(id: String): Color = when (id) {
         "child" -> child
-        "youth" -> youth
+        "middle" -> middle
         "senior" -> senior
-        else -> accent
+        else -> youth
     }
 
     fun ageSoft(id: String): Color = when (id) {
         "child" -> childSoft
-        "youth" -> youthSoft
+        "middle" -> middleSoft
         "senior" -> seniorSoft
-        else -> accentSoft
+        else -> youthSoft
     }
 }
