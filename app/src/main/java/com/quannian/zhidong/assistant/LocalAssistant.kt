@@ -2,6 +2,7 @@ package com.quannian.zhidong.assistant
 
 import com.quannian.zhidong.db.TrainingRepository
 import com.quannian.zhidong.model.AgeGroup
+import com.quannian.zhidong.model.AgeGroupConfig
 import com.quannian.zhidong.model.Profile
 import com.quannian.zhidong.model.ProfileStore
 
@@ -22,9 +23,8 @@ object LocalAssistant {
         val quickReplies: List<String> = emptyList()
     )
 
-    /** 常用快捷提问（按年龄段定制）。 */
-    fun quickQuestions(ageId: String): List<String> = when (ageId) {
-        "child" -> listOf("儿童每天运动多少合适？", "跳绳怎么入门？", "运动前后要注意什么？")
+    /** 常用快捷提问（按三大成年人群定制）。 */
+    fun quickQuestions(ageId: String): List<String> = when (AgeGroupConfig.normalizeAgeId(ageId)) {
         "middle" -> listOf("下班后健身怎么安排？", "肩颈酸痛怎么缓解？", "久坐族怎么恢复？")
         "senior" -> listOf("老人做什么运动安全？", "怎么预防跌倒？", "膝盖不好怎么练？")
         else -> listOf("体测结果怎么看？", "日常训练计划建议？", "动作不标准怎么纠正？")
@@ -61,7 +61,6 @@ object LocalAssistant {
         val base = when (ProfileStore.ageLabel(profile.ageId)) {
             "中年" -> "上班族运动建议每周 ≥150 分钟中等强度有氧，配合 2 次力量训练；"
             "银龄" -> "长者运动重在稳与柔，先低强度热身，避免急停与高冲击；"
-            "儿童" -> "儿童每天至少 60 分钟中等~高强度活动，游戏化更持久；"
             else -> "建议每周 3~5 次、每次 30 分钟左右的全身性运动；"
         }
         return "$base 先从基础动作练起、注意呼吸均匀，有不适随时停下。"

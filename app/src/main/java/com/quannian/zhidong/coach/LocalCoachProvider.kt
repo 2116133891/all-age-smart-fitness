@@ -1,5 +1,6 @@
 package com.quannian.zhidong.coach
 
+import com.quannian.zhidong.model.AgeGroupConfig
 import com.quannian.zhidong.model.ErrorType
 import com.quannian.zhidong.model.TrainingReport
 
@@ -11,8 +12,7 @@ import com.quannian.zhidong.model.TrainingReport
  */
 object LocalCoachProvider : CoachAIProvider {
 
-    private fun tone(age: String): String = when (age) {
-        "child" -> "小运动家"
+    private fun tone(age: String): String = when (AgeGroupConfig.normalizeAgeId(age)) {
         "senior" -> "您"
         else -> "你"
     }

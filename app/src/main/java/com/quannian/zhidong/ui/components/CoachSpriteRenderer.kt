@@ -35,7 +35,7 @@ object CoachSpriteRenderer {
     /**
      * 把一个 [CoachPose] 渲染成一张透明 [Bitmap]。
      * @param sizePx 边长（像素，正方形，人形居中）。
-     * @param ageId  年龄段（child/youth/senior）→ 头身比 + 发型。
+     * @param ageId  年龄段（youth/middle/senior，child 已废弃归 youth）→ 头身比 + 发型。
      * @param mainColor 主色（RGB，年龄配色）。
      */
     fun renderPose(pose: CoachPose, sizePx: Int, ageId: String, mainColor: Int): Sprite {
@@ -69,24 +69,21 @@ object CoachSpriteRenderer {
     ) {
         val w = size.toFloat()
         val cx = w / 2f
-        val age = when (ageId) {
-            "child" -> Age.CHILD
+        // child 已废弃，归一化为 youth
+        val age = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
             "senior" -> Age.SENIOR
             else -> Age.YOUTH
         }
 
         val headR = when (age) {
-            Age.CHILD -> w * 0.16f
             Age.SENIOR -> w * 0.11f
             else -> w * 0.085f
         }
         val torsoH = when (age) {
-            Age.CHILD -> w * 0.20f
             Age.SENIOR -> w * 0.24f
             else -> w * 0.28f
         }
         val limbW = when (age) {
-            Age.CHILD -> w * 0.055f
             Age.SENIOR -> w * 0.035f
             else -> w * 0.03f
         }

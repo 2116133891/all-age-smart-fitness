@@ -2,7 +2,7 @@ package com.quannian.zhidong.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -27,14 +28,15 @@ import com.quannian.zhidong.ui.theme.Palette
 import com.quannian.zhidong.ui.theme.QuanNingTheme
 
 private const val TAB_HOME = "tab_home"
-private const val TAB_FEATURES = "tab_features"
+private const val TAB_TRAINING = "tab_training"
 private const val TAB_ASSISTANT = "tab_assistant"
 private const val TAB_MINE = "tab_mine"
-private val TABS = setOf(TAB_HOME, TAB_FEATURES, TAB_ASSISTANT, TAB_MINE)
+private val TABS = setOf(TAB_HOME, TAB_TRAINING, TAB_ASSISTANT, TAB_MINE)
 
 /**
- * 全局导航（企业级 · 底部导航栏版）。
- * 4 个 tab（首页/功能/助手/我的）常驻；子页自动隐藏底栏；tab 切换保留各自子页栈。
+ * 全局导航（V3 · 统一 4 tab：首页 / 训练 / AI 助手 / 我的）。
+ * 4 个 tab 常驻；子页自动隐藏底栏；tab 切换保留各自子页栈。
+ *  本文件是**唯一**的底部导航实现，任何页面不得再写独立底部栏。
  */
 @Composable
 fun NavigationHost(modifier: Modifier = Modifier) {
@@ -52,52 +54,31 @@ fun NavigationHost(modifier: Modifier = Modifier) {
             }
         }
 
+        val tabs = listOf(
+            TabDef(TAB_HOME, "首页", Icons.Filled.Home),
+            TabDef(TAB_TRAINING, "训练", Icons.Filled.FitnessCenter),
+            TabDef(TAB_ASSISTANT, "AI 助手", Icons.Filled.SmartToy),
+            TabDef(TAB_MINE, "我的", Icons.Filled.Person)
+        )
+
         Scaffold(
             modifier = modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 if (showBottomBar) {
                     NavigationBar {
-                        NavigationBarItem(
-                            selected = currentRoute == TAB_HOME,
-                            onClick = { switchTab(TAB_HOME) },
-                            icon = { Icon(Icons.Filled.Home, "首页") },
-                            label = { Text("首页", fontSize = 12.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
-                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
-                                indicatorColor = Palette.accentSoft)
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute == TAB_FEATURES,
-                            onClick = { switchTab(TAB_FEATURES) },
-                            icon = { Icon(Icons.Filled.Apps, "功能") },
-                            label = { Text("功能", fontSize = 12.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
-                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
-                                indicatorColor = Palette.accentSoft)
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute == TAB_ASSISTANT,
-                            onClick = { switchTab(TAB_ASSISTANT) },
-                            icon = { Icon(Icons.Filled.SmartToy, "助手") },
-                            label = { Text("助手", fontSize = 12.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
-                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
-                                indicatorColor = Palette.accentSoft)
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute == TAB_MINE,
-                            onClick = { switchTab(TAB_MINE) },
-                            icon = { Icon(Icons.Filled.Person, "我的") },
-                            label = { Text("我的", fontSize = 12.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
-                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
-                                indicatorColor = Palette.accentSoft)
-                        )
+                        tabs.forEach { t ->
+                            NavigationBarItem(
+                                selected = currentRoute == t.route,
+                                onClick = { switchTab(t.route) },
+                                icon = { Icon(t.icon, t.label) },
+                                label = { Text(t.label, fontSize = 12.sp) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
+                                    unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
+                                    indicatorColor = Palette.accentSoft)
+                            )
+                        }
                     }
                 }
             }
@@ -124,16 +105,21 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         onAssistant = { switchTab(TAB_ASSISTANT) },
                         onWearable = { nav.navigate("wearable") },
                         onProfile = { nav.navigate("profile") },
-                        onYouthBodyTest = { nav.navigate("youthBodyTest") }
+                        onYouthBodyTest = { nav.navigate("youthBodyTest") },
+                        onContinueLast = { nav.navigate("training") }
                     )
                 }
-                composable(TAB_FEATURES) {
-                    FeaturesScreen(
+                composable(TAB_TRAINING) {
+                    TrainingHubScreen(
                         onBodyTest = { nav.navigate("bodyTest") },
                         onVideoPick = { nav.navigate("videoPick") },
                         onWearable = { nav.navigate("wearable") },
-                        onAssistant = { switchTab(TAB_ASSISTANT) },
                         onTraining = { nav.navigate("training") },
+                        onYouthTrainingPlan = { nav.navigate("youthTrainingPlan") },
+                        onYouthBodyTestReport = { nav.navigate("youthBodyTestReport") },
+                        onTeachingVideo = { asset, title, sub ->
+                            nav.navigate("teachingVideo/$asset/$title/$sub")
+                        },
                         onProfile = { nav.navigate("profile") }
                     )
                 }
@@ -146,6 +132,8 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         onWearable = { nav.navigate("wearable") },
                         onProfile = { nav.navigate("profile") },
                         onBodyTest = { nav.navigate("bodyTest") },
+                        onYouthBodyTest = { nav.navigate("youthBodyTest") },
+                        onYouthTrainingPlan = { nav.navigate("youthTrainingPlan") },
                         onSettings = { nav.navigate("settings") }
                     )
                 }
@@ -156,7 +144,7 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         onBack = { nav.popBackStack() },
                         onPickExercise = { exId -> nav.navigate("exercise/$exId") },
                         onBodyTest = {
-                            // 青年 → 新 七项 体测 模块；中年/银龄 → 旧 5 项 自评
+                            // 青年 → 七项 体测 模块；中年/银龄 → 旧 5 项 自评
                             if (id == "youth") nav.navigate("youthBodyTest") else nav.navigate("bodyTest")
                         },
                         onAgeHealth = { nav.navigate("ageHealth/$id") }
@@ -166,13 +154,11 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     BodyTestScreen(onBack = { nav.popBackStack() }, onGoTrain = { nav.popBackStack() })
                 }
 
-                // ── V2 中年/银龄 健康 管理（复用 数据 模型 + 仓库） ──
                 composable("ageHealth/{id}") { bse ->
                     val id = bse.arguments?.getString("id") ?: "middle"
                     AgeHealthScreen(ageId = id, onBack = { nav.popBackStack() })
                 }
 
-                // ── V2 青年 体测 完整 模块 ──
                 composable("youthBodyTest") {
                     YouthBodyTestScreen(
                         onBack = { nav.popBackStack() },
@@ -290,3 +276,5 @@ fun NavigationHost(modifier: Modifier = Modifier) {
         }
     }
 }
+
+private data class TabDef(val route: String, val label: String, val icon: ImageVector)

@@ -56,16 +56,16 @@ object CoachVisual {
     /** 年龄段 -> 真实数字教练 PNG 资源 id（未知年龄回退到青年）。
      *  V2 三大人群：青年 / 中年 / 银龄（coach_youth / coach_middle / coach_senior）。
      *  保留 child 映射以兼容旧画像数据。 */
-    fun coachResource(ageId: String): Int = when (ageId) {
-        "child" -> R.drawable.coach_child
+    fun coachResource(ageId: String): Int = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
+        // child 已废弃，归一化到 youth（见 coachResource 的 normalizeAgeId）
         "middle" -> R.drawable.coach_middle
         "senior" -> R.drawable.coach_senior
         else -> R.drawable.coach_youth
     }
 
     /** 年龄段中文短名（无障碍 / 描述用）。 */
-    fun ageOf(ageId: String): String = when (ageId) {
-        "child" -> "儿童教练"
+    fun ageOf(ageId: String): String = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
+        // child 已废弃
         "middle" -> "中年教练"
         "senior" -> "银龄教练"
         else -> "青年教练"

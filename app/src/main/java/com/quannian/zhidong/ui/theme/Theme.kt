@@ -3,12 +3,11 @@ package com.quannian.zhidong.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * 设计系统：浅色科技风（白/浅灰底 + 青蓝科技色 + 卡片化）。
- * 年龄段各有主色（儿童/青年/中年/银龄），保持统一设计语言但区分气质：
- *  儿童 = 活泼珊瑚橙（明亮运动感）
- *  青年 = 科技蓝（现代简洁）
+ * 设计系统：浅色科技风（白/浅灰底 + 青绿·深蓝·白 为主 + 卡片化）。
+ * 三大成年人群各有主色（V3 统一），保持统一设计语言但区分气质：
+ *  青年 = 科技蓝（现代·体测备考）
  *  中年 = 沉稳紫（高效·减压·平衡）
- *  银龄 = 沉稳青绿（稳重健康）
+ *  银龄 = 沉稳青绿（稳重·康养防跌）
  */
 object Palette {
     // 全局
@@ -24,11 +23,8 @@ object Palette {
     val warn = Color(0xFFF5A623)
     val bad = Color(0xFFE5484D)
 
-    // 儿童
-    val child = Color(0xFFF2713D)       // 珊瑚橙
-    val childSoft = Color(0xFFFFEFE4)
-    // 青年
-    val youth = Color(0xFF3B6BE8)       // 科技蓝
+    // 三大成年人群配色（V3：青绿 / 深蓝 / 白 为主，保留中年紫、银龄青绿区分气质）
+    val youth = Color(0xFF3B6BE8)       // 科技蓝（深蓝）
     val youthSoft = Color(0xFFE9F0FE)
     // 中年
     val middle = Color(0xFF8A56C8)      // 沉稳紫
@@ -37,15 +33,13 @@ object Palette {
     val senior = Color(0xFF2E9C8E)      // 青绿
     val seniorSoft = Color(0xFFE4F4F0)
 
-    fun ageColor(id: String): Color = when (id) {
-        "child" -> child
+    fun ageColor(id: String): Color = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(id)) {
         "middle" -> middle
         "senior" -> senior
         else -> youth
     }
 
-    fun ageSoft(id: String): Color = when (id) {
-        "child" -> childSoft
+    fun ageSoft(id: String): Color = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(id)) {
         "middle" -> middleSoft
         "senior" -> seniorSoft
         else -> youthSoft

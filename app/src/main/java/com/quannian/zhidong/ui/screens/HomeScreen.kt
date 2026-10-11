@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.SportsTennis
 import androidx.compose.material.icons.filled.Sync
@@ -67,7 +68,8 @@ fun HomeScreen(
     onAssistant: () -> Unit = {},
     onWearable: () -> Unit = {},
     onProfile: () -> Unit = {},
-    onYouthBodyTest: () -> Unit = {}
+    onYouthBodyTest: () -> Unit = {},
+    onContinueLast: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profile = remember { ProfileStore.load(context) }
@@ -118,14 +120,14 @@ fun HomeScreen(
 
         // 重点：青年 体测 模块（本次 版本 重点 展示）
         item {
-            YouthBodyTestFeatureCard(onClick = onYouthBodyTest)
+            MainTasksCard(onContinueLast = onContinueLast, onYouthBodyTest = onYouthBodyTest)
         }
 
         // 三大 人群 入口（教练 头像 静止 站立；卡片 一次性 淡入 + 克制 ripple）
         items(AgeGroup.entries.toList()) { age ->
             AgeCard(
                 age = age,
-                onClick = { onPickAge(age.id) },
+                onClick = { if (age == AgeGroup.YOUTH) onYouthBodyTest() else onPickAge(age.id) },
                 icon = when (age) {
                     AgeGroup.MIDDLE -> Icons.Filled.FitnessCenter
                     AgeGroup.SENIOR -> Icons.Filled.Accessibility
@@ -133,6 +135,9 @@ fun HomeScreen(
                 }
             )
         }
+
+        // 推荐 教学 内容（真实 资源 索引；按 当前 人群 展示 视频；无 记录 时 空 态 引导）
+        item { RecommendedContentCard(profile = profile, onYouthBodyTest = onYouthBodyTest) }
 
         // AI 动作诊断入口（视频复盘核心亮点）
         item {
@@ -412,5 +417,151 @@ private fun MyTrainingCard(onClick: () -> Unit) {
             Text("历史数据 · 成长曲线 · 训练记录", fontSize = 12.sp, color = Palette.inkSoft)
         }
         Text("→", fontSize = 22.sp, color = Palette.accent, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * 当前 用户 的 主要 任务（V3 首页 第三部分）。
+ *  只 用 真实 数据：上次 训练 / 体测 进度。无 记录 时 显示 首次 使用 引导，
+ *  不 生成 虚假 统计。
+ */
+@Composable
+private fun MainTasksCard(onContinueLast: () -> Unit, onYouthBodyTest: () -> Unit) {
+    val context = LocalContext.current
+    var lastSession by remember { mutableStateOf<com.quannian.zhidong.db.TrainingSession?>(null) }
+    var planRate by remember { mutableStateOf(-1.0) }
+
+    LaunchedEffect(Unit) {
+        val tr = com.quannian.zhidong.db.TrainingRepository(context.applicationContext)
+        lastSession = runCatching { tr.summary() }.getOrNull()?.lastSession
+        val br = com.quannian.zhidong.db.BodyTestRepository(context.applicationContext)
+        val planId = runCatching { br.latestPlanId() }.getOrNull()
+        if (planId != null) {
+            planRate = runCatching { br.planCompletionRate(planId) }.getOrNull() ?: -1.0
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Palette.card, RoundedCornerShape(24.dp))
+            .padding(16.dp)
+    ) {
+        Text("当前任务", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Palette.accentSoft, RoundedCornerShape(16.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onContinueLast() }
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Filled.History, null, tint = Palette.accent, modifier = Modifier.size(22.dp))
+            Column(Modifier.weight(1f)) {
+                Text("继续上次训练", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                Text(
+                    if (lastSession != null) "上次「${lastSession?.exerciseName}」${lastSession?.score} 分"
+                    else "还没有训练记录，先完成一次跟练",
+                    fontSize = 11.sp, color = Palette.inkSoft
+                )
+            }
+            Text("→", fontSize = 18.sp, color = Palette.accent, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Palette.good.copy(alpha = 0.10f), RoundedCornerShape(16.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onYouthBodyTest() }
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Filled.Insights, null, tint = Palette.good, modifier = Modifier.size(22.dp))
+            Column(Modifier.weight(1f)) {
+                Text("体测备考进度", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                Text(
+                    if (planRate >= 0.0) "当前计划完成率 ${(planRate * 100).toInt()}%"
+                    else "进入体测模块，生成你的备考计划",
+                    fontSize = 11.sp, color = Palette.inkSoft
+                )
+            }
+            Text("→", fontSize = 18.sp, color = Palette.good, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/**
+ * 推荐 教学 内容（V3 首页 第四部分）。
+ *  视频 一律 来自 真实 资源 索引（TeachingVideoRepository），按 当前 人群 展示。
+ *  无 视频 / 未 接入 时 显示 空 态 引导，不 用 假 封面。
+ */
+@Composable
+private fun RecommendedContentCard(profile: com.quannian.zhidong.model.Profile, onYouthBodyTest: () -> Unit) {
+    val repo = com.quannian.zhidong.repository.TeachingVideoRepository
+    val videos = remember { repo.allVideoItems() }
+    val color = Palette.ageColor(profile.ageId)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Palette.card, RoundedCornerShape(24.dp))
+            .padding(16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("推荐教学", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
+            Pill(ProfileStore.ageLabel(profile.ageId), color)
+        }
+        Spacer(Modifier.height(10.dp))
+
+        if (videos.isEmpty()) {
+            Text("当前还没有可播放的教学视频。", fontSize = 13.sp, color = Palette.inkSoft)
+        } else {
+            videos.take(2).forEach { v ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Palette.cardSoft, RoundedCornerShape(14.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onYouthBodyTest() }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Palette.accentSoft, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.PlayCircle, null, tint = Palette.accent, modifier = Modifier.size(22.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(v.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
+                        Text(v.summary, fontSize = 11.sp, color = Palette.inkSoft, maxLines = 1)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 }

@@ -57,7 +57,9 @@ fun MineScreen(
     onWearable: () -> Unit = {},
     onProfile: () -> Unit = {},
     onBodyTest: () -> Unit = {},
-    onSettings: () -> Unit = {}
+    onSettings: () -> Unit = {},
+    onYouthBodyTest: () -> Unit = {},
+    onYouthTrainingPlan: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profile = remember { ProfileStore.load(context) }
@@ -122,8 +124,10 @@ fun MineScreen(
             Text("我的功能", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
         }
         item { MenuRow("我的训练 · 成长曲线", Icons.Filled.History, Palette.accent, onTraining) }
+        item { MenuRow("青年体测 · 七项", Icons.Filled.FitnessCenter, Palette.good, onYouthBodyTest) }
+        item { MenuRow("备考计划 · 任务", Icons.Filled.FitnessCenter, Palette.warn, onYouthTrainingPlan) }
+        item { MenuRow("体测自评 · 按人群", Icons.Filled.FitnessCenter, Palette.good, onBodyTest) }
         item { MenuRow("运动手环 · 配对同步", Icons.Filled.Sync, Palette.middle, onWearable) }
-        item { MenuRow("体测自评", Icons.Filled.FitnessCenter, Palette.good, onBodyTest) }
         item { MenuRow("个性化 · 年龄性别", Icons.Filled.Person, Palette.senior, onProfile) }
 
         // 设置 + 关于

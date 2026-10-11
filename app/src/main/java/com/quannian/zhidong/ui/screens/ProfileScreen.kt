@@ -61,16 +61,13 @@ fun ProfileScreen(
     val context = LocalContext.current
     val saved = remember { ProfileStore.load(context) }
 
-    var ageId by remember { mutableStateOf(saved.ageId.ifBlank { "youth" }) }
-    var gender by remember { mutableStateOf(saved.gender.ifBlank { "unknown" }) }
+    var ageId by remember { mutableStateOf(com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(saved.ageId.ifBlank { "youth" })) }
+    var gender by remember { mutableStateOf(saved.gender.takeIf { it == "male" || it == "female" } ?: "male") }
 
-    val ages = listOf(
-        AgeOption("child", "儿童 (6-12)", "活泼 · 明亮 · 运动感", "轻运动 · 快乐成长"),
-        AgeOption("youth", "青年 (18-35)", "科技 · 简洁 · 现代", "科学运动 · 体态纠正"),
-        AgeOption("middle", "中年 (36-59)", "高效 · 减压 · 平衡", "下班健身 · 肩颈缓解"),
-        AgeOption("senior", "银龄 (60+)", "稳重 · 温和 · 健康", "舒缓运动 · 康养防跌")
-    )
-    val genders = listOf("female" to "女", "male" to "男", "unknown" to "不限")
+    val ages = com.quannian.zhidong.model.AgeGroupConfig.BANDS.map {
+        AgeOption(it.id, "${it.title} (${it.range})", it.desc, it.coachHint)
+    }
+    val genders = com.quannian.zhidong.model.AgeGroupConfig.GENDERS
 
     LazyColumn(
         modifier = modifier
@@ -136,7 +133,7 @@ fun ProfileScreen(
 
         // 性别
         item {
-            Text("性别（可选）", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
+            Text("性别", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 genders.forEach { (gid, label) ->

@@ -310,8 +310,10 @@ object CoachMotionEngine {
         ageId: String,
         moveIndex: Int = 0
     ): CoachPose {
-        // 银龄动作整体偏慢（ageSpeed 0.55），儿童活泼（1.0），青年中速（0.85）
-        val speed = when (ageId) { "child" -> 1.0f; "senior" -> 0.55f; else -> 0.85f }
+        // 银龄动作整体偏慢（ageSpeed 0.55），青年/中年中速（0.85）
+        val speed = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
+            "senior" -> 0.55f; else -> 0.85f
+        }
         if (state == CoachState.IDLE || state == CoachState.REST ||
             state == CoachState.INTRO || state == CoachState.FINISH || state == CoachState.COUNTDOWN
         ) {
