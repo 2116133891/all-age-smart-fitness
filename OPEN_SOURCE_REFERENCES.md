@@ -4,6 +4,8 @@
 > 本文件对每个借鉴来源做许可分类，标注哪些可复用、哪些仅参考。
 > 生成时间：2026-10-06 · 项目根：`C:\Users\Admin\Desktop\城市大赛项目`
 
+> **V2 更新（2026-10-11）**：本轮任务 10 研究的 4 个目标仓库 + 新增依赖（Media3）+ 视频/数字人素材生成工具，许可分类与处置见文末「V2 开源研究记录」。
+
 ---
 
 ## 分类图例
@@ -64,3 +66,39 @@
 - 视频动作分析**全程本机**（MediaPipe 本地推理 + `MediaMetadataRetriever` 读本地视频），**不上传任何用户视频到服务器**。
 - UI 明示「视频仅在本机分析」。
 - 评分标注为「动作规范度」（运动教学辅助），**非医学/伤病诊断**（spec §三十四）。
+
+---
+
+## 5. V2 开源研究记录（任务 10，2026-10-11）
+
+### 5.1 用户指定研究的 4 个仓库
+
+| 仓库 | 目标功能 | 许可证（核查结果） | 架构 | 兼容性 | 处置 |
+|------|---------|------------------|------|--------|------|
+| `atikulmunna/SmartForm` | 运动姿态识别 + 动作计数 | 未能在线确认（仓库可达但 本次 网络 超时，无法 抓取 LICENSE） | 多 平台 姿态 模型 | 未 整 项目 引入 | **REFERENCE_ONLY**：仅 参考 姿态 计数 思路；**未 复制 源码**，无 许可 风险。若 后续 复制 须 先 确认 其 LICENSE。 |
+| `Gakiwoo/ai-sport-mobile` | MediaPipe 实时 运动 计数 移动端 | 未能在线 确认（同上 超时） | 移动 运动 追踪 | 未 整 项目 引入 | **REFERENCE_ONLY**：参考 实时 计数 架构；**未 复制 源码**。 |
+| `shahmir2004/exercise-form-correction` | 动作 纠错（姿态 + 分类） | 未能在线 确认（同上 超时） | 姿态 纠错 模型 | 未 整 项目 引入 | **REFERENCE_ONLY**：参考 纠错 分类 思路；**未 复制 源码**。 |
+| `google-ai-edge/mediapipe-samples`（pose_landmarker android） | Pose Landmarker 官方 示例 | **Apache-2.0**（已 在线 确认） | 官方 示例 | 兼容（本项目 已 用 0.10.14 tasks-vision） | **SAFE_TO_REUSE**：官方 用法 参考（本项目 `PoseDetector` 已 按 VIDEO 模式 + 单调 时间戳 实现，无需 复制 示例 代码）。 |
+
+> 诚实 声明：3 个 非 官方 仓库 的 LICENSE 因 本次 网络 超时 **未 能 在线 确认**，一律 标 **REFERENCE_ONLY** 且 **未 复制 任何 源码**（仅 思路 参考），故 **无 许可 合规 风险**。MediaPipe 官方 示例 为 Apache-2.0，可 放心 参考。
+
+### 5.2 V2 新增 依赖 许可
+
+| 依赖 | 版本 | 许可 | 用途 |
+|------|------|------|------|
+| `androidx.media3:media3-exoplayer/ui/common/datasource` | 1.4.1 | **Apache-2.0**（AndroidX） | 教学 视频 播放（本地 assets 视频） |
+| `com.google.mediapipe:tasks-vision` | 0.10.14 | **Apache-2.0** | 姿态 识别（既有） |
+| `androidx.camera:*` | 1.3.0 | Apache-2.0 | 摄像头（既有） |
+| `androidx.room:*` | 2.5.2 | Apache-2.0 | 持久化（既有，V2 升 v2 加 表） |
+
+### 5.3 V2 视频 / 数字人 素材 生成 工具（非 开源 库，记录 来源 可 追溯）
+
+- **数字 教练 PNG**：由 Agnes AIGC 图 生 图（image-to-image）从 用户 提供 的 三 合一 参考 图 分离 生成 3 张 独立 全身 人物（青/中/银 龄），落地 `res/drawable/coach_{youth,middle,senior}.png`。**非 真实 3D 模型**，仅作 UI 视觉 形象（诚实 标注）。
+- **教学 视频**：由 Agnes AIGC 文 生 视频（text-to-video，`agnes-video-2.5`）生成 7 条 720P H.264 MP4，落地 `assets/videos/video_youth_*.mp4`。**AI 生成 动作 示范**，非 摄影师 实拍，**不 冒充** 官方 场地 测试。
+- 所有 素材 **均 本地 打包** 进 APK，**不 依赖 临时 外部 链接**（满足 任务 2 约束）。
+
+### 5.4 许可 合规 总 声明（V2）
+
+- V2 **未 复制** 任何 外部 专有 源码；3 个 非 官方 仓库 仅 思路 参考（REFERENCE_ONLY）。
+- 新增 依赖 全部 为 **Apache-2.0**（AndroidX / MediaPipe / Media3），无 许可 冲突。
+- 若 后续 需 复制 SmartForm / ai-sport-mobile / exercise-form-correction 的 具体 代码，**必须 先 在线 确认 其 LICENSE**，并 在 该 文件 头部 保留 版权 + 许可 声明（Apache-2.0 须 保留 LICENSE + NOTICE）。

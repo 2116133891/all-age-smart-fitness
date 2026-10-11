@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_video",
+  "mode": "text_to_video",
+  "model": "agnes-video-2.5-flash",
+  "task_id": "video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby0yLjU7dmlkZW9faWQ6dmlkZW9fOGU2ZThjZTk4M2ViN2YxMWI0NmUwNjBjYjJmZjNkMDdiNGQwNzA3YjIwMDU3NDlk",
+  "original_prompt": "体测前热身与运动后整理教学视频：慢跑、肩髋热身、拉伸放松。",
+  "enhanced_prompt": "A clean instructional fitness video demonstrating a pre-exercise warm-up and post-exercise cool-down routine, full-body front view. A young East Asian man, around 20 years old, wearing a teal-and-white short-sleeve athletic shirt and dark navy shorts, on a light gym floor. Smooth gentle slow-motion sequence: light jogging in place to raise heart rate, then easy arm circles and gentle side-to-side trunk rotation to warm up the shoulders and spine, finally slowing into gentle forward and hamstring stretches with deep breaths for the cool-down. Bright even studio lighting, stable static camera, clean minimal light background, realistic anatomy with two arms and two legs, smooth continuous gentle movement with no sudden jumps or extra limbs. Emphasize gradual, controlled warm-up and relaxing stretch.",
+  "aspect_ratio": "16:9",
+  "seconds": 4,
+  "actual_size": "720P",
+  "seed": null,
+  "remote_url": "https://platform-outputs.agnes-ai.space/videos/agnes-video-2.5/video_8e6e8ce983eb7f11b46e060cb2ff3d07b4d0707b2005749d.mp4",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042547-01a12935b47376c198a19ca84a019232.mp4",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042547-01a12935b47376c198a19ca84a019232.json",
+  "mime_type": "video/mp4",
+  "bytes": 518737,
+  "duration_seconds": 4.0,
+  "created_at": "2026-10-11T04:25:47.891105900+00:00"
+}

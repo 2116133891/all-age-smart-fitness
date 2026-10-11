@@ -1,4 +1,36 @@
-﻿## ⚠️ 本轮（10-10）参赛版大功能扩展 + 双 bug 修复
+﻿## ⚠️ 本轮（10-11）参赛版 V2 —— 青年体测完整模块 + 真实教学视频 + 标准评分 + 备考计划 + 三类数字人
+
+**目标：把全龄智动升级为"面向青年体质测试 / 中年健康管理 / 银龄科学运动"的全龄智能运动指导平台。青年体测为本次重点。编译 ✅、63 项单测 ✅（含 V2LogicTest 19 项）、APK 已构建并安装 ✅、核心页面真机已验证 ✅。详见 `V2_IMPLEMENTATION_REPORT.md`。**
+
+### A. 新增功能（全部本地离线）
+| 能力 | 文件 | 说明 |
+|---|---|---|
+| 青年体测七项 | `model/BodyTestCatalog` + `ui/screens/YouthBodyTest{Screen,DetailScreen}.kt` | BMI/肺活量/50m/坐位体前屈/立定跳远/引体·仰卧/1000-800m，含性别分支 |
+| 真实教学视频 | `assets/videos/*.mp4`（7 条）+ `ui/components/TeachingVideoPlayer.kt` | Agnes 生成 720P H.264 MP4，Media3 ExoPlayer 播放（播放/暂停/进度/全屏/重播/错误/释放/本地） |
+| 视频资源索引 | `repository/TeachingVideoRepository.kt` | itemKey→视频映射 + 缺失资源处理 + 唯一 id 校验 |
+| 体测标准评分 | `db/BodyTestStandardService`（在 BodyTestRepository.kt） | 来源/版本/适用范围标注，保守阈值，不适用不输出分数 |
+| 备考训练计划 | `service/TrainingPlanService.kt` + `db/TrainingPlanTask` | 数据模型+规则（非 LLM 自由文本），薄弱项优先 + 周渐进 + 安全边界 |
+| 体测报告 | `ui/screens/YouthBodyTestReportScreen.kt` | 完成/未录入/最近/变化/完成率/弱项/趋势（真实数据，不足提示） |
+| 中年/银龄健康 | `ui/screens/AgeHealthScreen.kt` | 复用数据模型；体重/BMI 历史 + 大字体 + 安全提醒 + 教学/医疗区分 |
+| 三类数字人 | `res/drawable/coach_{youth,middle,senior}.png` + `CoachVisual` 补 middle | Agnes 从用户合并图分离生成 3 张独立全身 PNG（统一 3D 风 + 品牌色） |
+| Room v2 | `db/QuanNingDatabase.kt` | +BodyTestResult/TrainingPlanTask 表 + 手工 migration（保留旧 training_sessions） |
+
+### B. 修改（未推翻既有架构）
+`app/build.gradle`（+Media3 1.4.1）、`model/PoseModels.kt`（AgeGroup+focus）、`ui/screens/{HomeScreen,NavigationHost,AgeScreen}.kt`（重新定位 + V2 路由）、`CoachVisual.kt`（middle 映射）、`res/drawable/coach_{youth,senior}.png`（升级）。
+
+### C. 验证分级（本环境约束）
+- ✅ 编译 `:app:compileDebugKotlin` / `:app:assembleDebug`（APK 81.3MB，`b7a0af21` MI 9 安装 Success + 启动无崩溃 + dexopt success）。
+- ✅ 纯 JVM 单测 **63/63**（`ExerciseAnalyzerTest`/`ScoreEngineTest`/`OneEuroFilterTest`/`VideoAnalysisEngineTest`/`CoachMotionEngineTest`/`V2LogicTest`，`bash run_jvm_tests_v2.sh`）。
+- ✅ 真机截图确认：首页（新 hero + 青年体测重点卡 + 三大入口 + 静止教练）、青年体测主页（七项 + 报告/计划）、立定跳远详情（播放器 + 动作要点 + 录入 + 趋势）。
+- ⚠️ 视频实际解码播放：MIUI `miui.securitycenter` AdbInstall 系统浮层拦截编程点击，未视觉确认；播放器已按 asset→cache file:// 最可靠方案实现 + 单测覆盖，需人工手点确认画面。
+- ⚠️ 官方标准完整分档：当前为保守及格阈值，需依官方原表复核后补全。
+
+### D. 诚实声明
+- 7 条视频为 **AI 生成动作示范**（非摄影师实拍），**不冒充**官方场地测试；BMI/肺活量不生成假装摄像头测量的视频，仅方法说明。
+- 数字人为 **AI 生成 PNG 视觉形象**（非真实 3D 模型）。
+- 引体/仰卧**未复制深蹲分析器冒充姿态识别**；本版本视频教学 + 手工录入为主。
+
+---
 
 **目标：新增 6 大能力（引导页 / 年龄性别选择 / 练·测双模块 / AI 小助手 / 运动手环 / 中年组），并修复 2 个真机反馈的 bug（视频分析闪退、数字人不会动）。BUILD SUCCESSFUL（:app:compileDebugKotlin + :app:assembleDebug，APK 71.6MB）。**
 

@@ -12,11 +12,13 @@ enum class AgeGroup(
     val id: String,
     val title: String,
     val subtitle: String,
-    val tagline: String
+    val tagline: String,
+    /** 该 人群 的 核心 内容 标签（首页 卡 副 标 题，对应 重新 定位 的 三 大 入口）。 */
+    val focus: String
 ) {
-    YOUTH("youth", "青年运动教练", "科技 · 简洁 · 现代", "科学运动 · 体态纠正"),
-    MIDDLE("middle", "中年运动教练", "高效 · 减压 · 平衡", "下班健身 · 肩颈缓解"),
-    SENIOR("senior", "银龄运动教练", "稳重 · 温和 · 健康", "舒缓运动 · 康养防跌")
+    YOUTH("youth", "青年 体测 教练", "体测 备考 · 科学 运动", "体测 备考 · 专项 训练 · AI 动作 指导", "重点 展示"),
+    MIDDLE("middle", "中年 健康 管理 教练", "体重 管理 · 基础 体能", "体重 管理 · 柔韧性 · 日常 运动", "健康 管理"),
+    SENIOR("senior", "银龄 科学 运动 教练", "太极 · 八段锦 · 平衡", "太极 · 八段锦 · 平衡 能力 · 安全 运动", "科学 运动")
 }
 
 /**

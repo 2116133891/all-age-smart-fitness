@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_video",
+  "mode": "text_to_video",
+  "model": "agnes-video-2.5-flash",
+  "task_id": "video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby0yLjU7dmlkZW9faWQ6dmlkZW9fMGYwNTQ0YmY4Nzg0YjRmYjJjMDRkOTcxZTRmZjk0NWJmMWRjZDdiOTE4MzE3MDUw",
+  "original_prompt": "800 米和 1000 米跑步节奏及训练方法教学视频：匀速有氧跑，节奏稳定。",
+  "enhanced_prompt": "A clean instructional endurance-running video demonstrating 800m / 1000m even-pace running technique. A young East Asian man, around 20 years old, wearing a teal-and-white short-sleeve athletic top and dark navy shorts, running on a light track or outdoor path. Smooth slow-motion side view: he runs with an even relaxed rhythm, moderate forward lean, light quick foot strikes, relaxed shoulders and arms, and steady arm swing, maintaining a consistent moderate pace (not a full sprint) to show sustainable aerobic effort and relaxed breathing. Bright even studio lighting, stable camera, clean minimal light background, realistic anatomy with two arms and two legs, smooth continuous running motion with no extra limbs. Emphasize even pacing, relaxed upper body, and rhythmic breathing.",
+  "aspect_ratio": "16:9",
+  "seconds": 4,
+  "actual_size": "720P",
+  "seed": null,
+  "remote_url": "https://platform-outputs.agnes-ai.space/videos/agnes-video-2.5/video_0f0544bf8784b4fb2c04d971e4ff945bf1dcd7b918317050.mp4",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042428-01a129347f5275019af3c1b46fc8908c.mp4",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042428-01a129347f5275019af3c1b46fc8908c.json",
+  "mime_type": "video/mp4",
+  "bytes": 1617746,
+  "duration_seconds": 4.0,
+  "created_at": "2026-10-11T04:24:28.754283400+00:00"
+}

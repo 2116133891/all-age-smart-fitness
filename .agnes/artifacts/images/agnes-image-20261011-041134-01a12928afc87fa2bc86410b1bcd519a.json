@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_image",
+  "mode": "image_to_image",
+  "model": "agnes-i2i-general-model",
+  "original_prompt": "把提供的三人合图中的左侧年轻男性单独裁切为一张独立全身数字教练形象，青绿/白/深蓝运动服，保留一致的 3D 渲染风格。",
+  "enhanced_prompt": "Isolate ONLY the young East Asian man on the left of the reference image, and remove the two other people entirely. Render him as a clean studio-quality 3D digital coach: a young athletic man around 20 years old, full-body standing pose from head to toe (nothing cropped), wearing a coordinated teal-and-white short-sleeve athletic shirt with dark navy shorts and white sneakers, subtle confident smile, healthy and energetic. Consistent character proportions and a brand color palette of teal, white and dark navy. Soft light-gray seamless studio background with a gentle soft shadow under the feet. Keep the same 3D render style, lighting and skin tone as the reference. Sharp clean edges, no compression artifacts, no black blocks. The character should occupy most of the canvas height and be centered, vertical portrait framing.",
+  "size": "1K",
+  "ratio": "3:4",
+  "reference_image": "https://cos-agnes-code.agnes-ai.com/agnes/code_attachment/039686c9-3aba-42e7-8f3b-65af3fdf6a1b/1791691868_dd7e78a8.png",
+  "remote_url": "https://platform-outputs.agnes-ai.space/images/i2i/1a0ab077ea6248f5806358b0ac3a262f/output.png",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\images\\agnes-image-20261011-041134-01a12928afc87fa2bc86410b1bcd519a.png",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\images\\agnes-image-20261011-041134-01a12928afc87fa2bc86410b1bcd519a.json",
+  "mime_type": "image/png",
+  "width": 864,
+  "height": 1152,
+  "bytes": 679693,
+  "preview": null,
+  "created_at": "2026-10-11T04:11:34.728943600+00:00"
+}

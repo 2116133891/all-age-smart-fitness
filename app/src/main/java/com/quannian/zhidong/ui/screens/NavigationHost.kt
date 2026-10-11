@@ -123,7 +123,8 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         onAiDiagnose = { nav.navigate("videoPick") },
                         onAssistant = { switchTab(TAB_ASSISTANT) },
                         onWearable = { nav.navigate("wearable") },
-                        onProfile = { nav.navigate("profile") }
+                        onProfile = { nav.navigate("profile") },
+                        onYouthBodyTest = { nav.navigate("youthBodyTest") }
                     )
                 }
                 composable(TAB_FEATURES) {
@@ -154,11 +155,63 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         id = id,
                         onBack = { nav.popBackStack() },
                         onPickExercise = { exId -> nav.navigate("exercise/$exId") },
-                        onBodyTest = { nav.navigate("bodyTest") }
+                        onBodyTest = {
+                            // 青年 → 新 七项 体测 模块；中年/银龄 → 旧 5 项 自评
+                            if (id == "youth") nav.navigate("youthBodyTest") else nav.navigate("bodyTest")
+                        },
+                        onAgeHealth = { nav.navigate("ageHealth/$id") }
                     )
                 }
                 composable("bodyTest") {
                     BodyTestScreen(onBack = { nav.popBackStack() }, onGoTrain = { nav.popBackStack() })
+                }
+
+                // ── V2 中年/银龄 健康 管理（复用 数据 模型 + 仓库） ──
+                composable("ageHealth/{id}") { bse ->
+                    val id = bse.arguments?.getString("id") ?: "middle"
+                    AgeHealthScreen(ageId = id, onBack = { nav.popBackStack() })
+                }
+
+                // ── V2 青年 体测 完整 模块 ──
+                composable("youthBodyTest") {
+                    YouthBodyTestScreen(
+                        onBack = { nav.popBackStack() },
+                        onPickItem = { key -> nav.navigate("youthBodyTestItem/$key") },
+                        onReport = { nav.navigate("youthBodyTestReport") },
+                        onPlan = { nav.navigate("youthTrainingPlan") }
+                    )
+                }
+                composable("youthBodyTestItem/{key}") { bse ->
+                    val key = bse.arguments?.getString("key") ?: ""
+                    YouthBodyTestDetailScreen(
+                        itemKey = key,
+                        onBack = { nav.popBackStack() },
+                        onTrain = { nav.navigate("youthTrainingPlan") }
+                    )
+                }
+                composable("youthTrainingPlan") {
+                    YouthTrainingPlanScreen(
+                        onBack = { nav.popBackStack() },
+                        onPlayVideo = { asset, title, sub -> nav.navigate("teachingVideo/$asset/$title/$sub") }
+                    )
+                }
+                composable("youthBodyTestReport") {
+                    YouthBodyTestReportScreen(
+                        onBack = { nav.popBackStack() },
+                        onPickItem = { key -> nav.navigate("youthBodyTestItem/$key") },
+                        onPlan = { nav.navigate("youthTrainingPlan") }
+                    )
+                }
+                composable("teachingVideo/{asset}/{title}/{subtitle}") { bse ->
+                    val asset = bse.arguments?.getString("asset") ?: ""
+                    val title = bse.arguments?.getString("title") ?: ""
+                    val sub = bse.arguments?.getString("subtitle") ?: ""
+                    TeachingVideoScreen(
+                        assetPath = asset,
+                        title = title,
+                        subtitle = sub,
+                        onBack = { nav.popBackStack() }
+                    )
                 }
                 composable("exercise/{id}") { bse ->
                     val id = bse.arguments?.getString("id") ?: ""

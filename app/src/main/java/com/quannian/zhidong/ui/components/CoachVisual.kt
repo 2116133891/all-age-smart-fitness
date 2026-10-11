@@ -53,9 +53,12 @@ import com.quannian.zhidong.ui.theme.Palette
 /** 数字教练视觉资源注册表（ageId -> 可绘制的 coach 资源）。 */
 object CoachVisual {
 
-    /** 年龄段 -> 真实数字教练 PNG 资源 id（未知年龄回退到青年）。 */
+    /** 年龄段 -> 真实数字教练 PNG 资源 id（未知年龄回退到青年）。
+     *  V2 三大人群：青年 / 中年 / 银龄（coach_youth / coach_middle / coach_senior）。
+     *  保留 child 映射以兼容旧画像数据。 */
     fun coachResource(ageId: String): Int = when (ageId) {
         "child" -> R.drawable.coach_child
+        "middle" -> R.drawable.coach_middle
         "senior" -> R.drawable.coach_senior
         else -> R.drawable.coach_youth
     }
@@ -63,6 +66,7 @@ object CoachVisual {
     /** 年龄段中文短名（无障碍 / 描述用）。 */
     fun ageOf(ageId: String): String = when (ageId) {
         "child" -> "儿童教练"
+        "middle" -> "中年教练"
         "senior" -> "银龄教练"
         else -> "青年教练"
     }

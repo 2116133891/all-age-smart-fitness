@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_video",
+  "mode": "text_to_video",
+  "model": "agnes-video-2.5-flash",
+  "task_id": "video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby0yLjU7dmlkZW9faWQ6dmlkZW9fMDIwYWFkZmU1MjkzN2FmYTczMGUyOTE0ZTI3OTkzNzdkYzUyOTM0NzkzYjg5MWRh",
+  "original_prompt": "50 米跑起跑、加速与冲刺要点教学视频：蹲踞式起跑，蹬离后加速冲刺。",
+  "enhanced_prompt": "A clean instructional track-athletics video demonstrating a 50-meter sprint: starting block, explosive drive phase, acceleration, and sprint finish. A young East Asian man, around 20 years old, wearing a teal-and-white short-sleeve athletic top and dark navy shorts, on a light running track. Smooth slow-motion side view: he begins in the crouched set position with hands and toes ready, explodes forward out of the start into a forward-leaning drive phase with fast arm drive, then lengthens his stride and accelerates into a full upright sprint finish. Bright even studio lighting, stable static camera following the movement, clean minimal light background, realistic anatomy with two arms and two legs, smooth continuous running motion with no extra limbs. Emphasize explosive start, quick arm turnover, and tall sprint posture.",
+  "aspect_ratio": "16:9",
+  "seconds": 4,
+  "actual_size": "720P",
+  "seed": null,
+  "remote_url": "https://platform-outputs.agnes-ai.space/videos/agnes-video-2.5/video_020aadfe52937afa730e2914e2799377dc52934793b891da.mp4",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042330-01a129339b0377609699b12529a0d961.mp4",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042330-01a129339b0377609699b12529a0d961.json",
+  "mime_type": "video/mp4",
+  "bytes": 954833,
+  "duration_seconds": 4.0,
+  "created_at": "2026-10-11T04:23:30.307461500+00:00"
+}

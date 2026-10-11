@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_image",
+  "mode": "image_to_image",
+  "model": "agnes-i2i-general-model",
+  "original_prompt": "把提供的三人合图中的右侧银龄男性单独裁切为一张独立全身数字教练形象，太极/八段锦低冲击运动服装，气质温和可信。",
+  "enhanced_prompt": "Isolate ONLY the elderly East Asian man on the right of the reference image, and remove the two other people entirely. Render him as a clean studio-quality 3D digital coach: a warm, gentle, trustworthy man aged around 65 years old with neat short white hair, full-body standing pose from head to toe (nothing cropped), wearing traditional taichi / Ba Duan Jin style sportswear in teal and off-white (a light mandarin-collar top and loose teal trousers) with soft white low-impact shoes, calm serene smiling expression. Consistent character proportions and a brand color palette of teal, off-white and dark navy. Soft light-gray seamless studio background with a gentle soft shadow under the feet. Keep the same 3D render style, lighting and skin tone as the reference. Sharp clean edges, no compression artifacts, no black blocks. The character should occupy most of the canvas height and be centered, vertical portrait framing.",
+  "size": "1K",
+  "ratio": "3:4",
+  "reference_image": "https://cos-agnes-code.agnes-ai.com/agnes/code_attachment/039686c9-3aba-42e7-8f3b-65af3fdf6a1b/1791691981_f4cc3d46.png",
+  "remote_url": "https://platform-outputs.agnes-ai.space/images/i2i/66d18bde794b46cea1b8235228021cfe/output.png",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\images\\agnes-image-20261011-041321-01a1292a51557df18676c73f7037b251.png",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\images\\agnes-image-20261011-041321-01a1292a51557df18676c73f7037b251.json",
+  "mime_type": "image/png",
+  "width": 864,
+  "height": 1152,
+  "bytes": 590809,
+  "preview": null,
+  "created_at": "2026-10-11T04:13:21.621710700+00:00"
+}

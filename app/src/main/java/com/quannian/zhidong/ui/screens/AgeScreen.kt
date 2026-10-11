@@ -1,6 +1,7 @@
 package com.quannian.zhidong.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +53,8 @@ fun AgeScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onPickExercise: (String) -> Unit,
-    onBodyTest: () -> Unit = {}
+    onBodyTest: () -> Unit = {},
+    onAgeHealth: () -> Unit = {}
 ) {
     val age = AgeGroup.entries.firstOrNull { it.id == id } ?: AgeGroup.YOUTH
     val color = Palette.ageColor(age.id)
@@ -189,6 +191,52 @@ fun AgeScreen(
                 ) {
                     Text("开始体测", fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                         color = androidx.compose.ui.graphics.Color.White)
+                }
+            }
+            // V2 中年/银龄：健康管理 / 科学运动 入口（大 字体 + 安全 提醒）
+            if (id != "youth") {
+                item {
+                    Card() {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(soft, RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.FitnessCenter, "健康管理", tint = color, modifier = Modifier.size(30.dp))
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(if (id == "senior") "银龄 · 科学 运动 健康" else "中年 · 健康 管理",
+                                    fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                                Spacer(Modifier.height(3.dp))
+                                Text(if (id == "senior") "大 字体 操作 · 平衡 / 安全 提醒 · 太极 八段锦" else "体重 管理 · 低 冲击 有氧 · 柔韧 日常 运动",
+                                    fontSize = 12.sp, color = Palette.inkSoft)
+                            }
+                        }
+                    }
+                }
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.5.dp, color.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onAgeHealth() }
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(if (id == "senior") "进入 银龄 科学 运动" else "进入 中年 健康 管理",
+                            fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = color)
+                    }
                 }
             }
         }

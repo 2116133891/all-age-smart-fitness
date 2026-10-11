@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_video",
+  "mode": "text_to_video",
+  "model": "agnes-video-2.5-flash",
+  "task_id": "video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby0yLjU7dmlkZW9faWQ6dmlkZW9fZmM5Yjk2MTIwY2M2NmQ4NGFhYjdkMzYxNTAyYzcxZjVlN2ZiMTg0YjBkMGRjZTdh",
+  "original_prompt": "引体向上标准动作教学视频：年轻男性从悬垂开始，下巴过杆，受控下放。",
+  "enhanced_prompt": "A clean instructional fitness video demonstrating a correct pull-up, full-body side-front view. A young East Asian man, around 20 years old, wearing a teal-and-white short-sleeve athletic shirt and dark navy shorts, grips an overhead horizontal pull-up bar. Smooth slow motion: from a dead hang with straight arms, he pulls his chin above the bar with controlled back-and-arm strength (up phase), holds briefly at the top with chin above the bar, then lowers back down under control to a straight-arm hang (down phase). Bright even studio lighting, stable static camera, clean minimal light background, realistic anatomy with two arms and two legs, smooth continuous movement with no sudden jumps or extra limbs. Emphasize chin above the bar at the top and no swinging.",
+  "aspect_ratio": "16:9",
+  "seconds": 4,
+  "actual_size": "720P",
+  "seed": null,
+  "remote_url": "https://platform-outputs.agnes-ai.space/videos/agnes-video-2.5/video_fc9b96120cc66d84aab7d361502c71f5e7fb184b0d0dce7a.mp4",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042026-01a12930cbf47ef0b714f449dc846b98.mp4",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042026-01a12930cbf47ef0b714f449dc846b98.json",
+  "mime_type": "video/mp4",
+  "bytes": 651306,
+  "duration_seconds": 4.0,
+  "created_at": "2026-10-11T04:20:26.228113300+00:00"
+}

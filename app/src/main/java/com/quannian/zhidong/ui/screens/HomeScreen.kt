@@ -53,10 +53,10 @@ import com.quannian.zhidong.ui.theme.Palette
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * 首页（参赛版）：全龄智动 · 数字人智能运动指导
- *   儿童 / 青年 / 中年 / 银龄 四个年龄段入口 + AI 动作诊断 + 我的训练
- *   + 新增：AI 小助手（本地离线问答）/ 运动手环 / 个性化设置。
- *  P0 稳定性：三个教练头像静止站立（无循环动画）；卡片一次性 220ms 淡入；点击克制 ripple。
+ * 首页（参赛版 V2）：全龄智动 · 全龄 智能 运动 指导 平台
+ *   定位：面向 青年 体质 测试、中年 健康 管理、银龄 科学 运动 的 全龄 平台。
+ *   三大 人群 入口（青年 体测 / 中年 健康 / 银龄 运动），青年 体测 为 重点 展示 模块。
+ *   P0 稳定性：教练 头像 静止 站立（无 循环 动画）；卡片 一次性 220ms 淡入；点击 克制 ripple。
  */
 @Composable
 fun HomeScreen(
@@ -66,7 +66,8 @@ fun HomeScreen(
     onAiDiagnose: () -> Unit,
     onAssistant: () -> Unit = {},
     onWearable: () -> Unit = {},
-    onProfile: () -> Unit = {}
+    onProfile: () -> Unit = {},
+    onYouthBodyTest: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profile = remember { ProfileStore.load(context) }
@@ -78,7 +79,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 顶部品牌 hero（京东健康式渐变卡：问候 + 画像 + 数字人形象）
+        // 顶部 品牌 hero（青绿→深蓝 渐变 卡：定位 + 画像 + 数字 人 形象）
         item {
             Row(
                 modifier = Modifier
@@ -86,7 +87,7 @@ fun HomeScreen(
                     .clip(RoundedCornerShape(24.dp))
                     .background(
                         brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(Palette.accent, Palette.middle, Palette.senior)
+                            colors = listOf(Palette.senior, Palette.accent, Palette.youth)
                         ),
                         shape = RoundedCornerShape(24.dp)
                     )
@@ -97,25 +98,30 @@ fun HomeScreen(
                 Column(Modifier.weight(1f)) {
                     Text("全龄智动", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = androidx.compose.ui.graphics.Color.White)
                     Spacer(Modifier.height(4.dp))
-                    Text("数字人 · ${ProfileStore.ageLabel(profile.ageId)} · ${ProfileStore.genderLabel(profile.gender)}",
-                        fontSize = 13.sp, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
-                    Spacer(Modifier.height(10.dp))
-                    Text("选择今天想练或想测的项目 →", fontSize = 13.sp,
-                        color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("青年 体测 · 中年 健康 · 银龄 科学 运动",
+                        fontSize = 13.sp, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f))
+                    Spacer(Modifier.height(2.dp))
+                    Text("${ProfileStore.ageLabel(profile.ageId)} · ${ProfileStore.genderLabel(profile.gender)} · 数字 人 智能 运动 指导 平台",
+                        fontSize = 11.sp, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f))
                 }
-                // 数字人形象（当前画像年龄）
+                // 数字 人 形象（当前 画像 年龄）
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(
                         com.quannian.zhidong.ui.components.CoachVisual.coachResource(profile.ageId)
                     ),
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier.size(72.dp)
+                    modifier = Modifier.size(76.dp)
                 )
             }
         }
 
-        // 四个年龄入口（教练头像静止站立；卡片一次性淡入 + 克制 ripple）
+        // 重点：青年 体测 模块（本次 版本 重点 展示）
+        item {
+            YouthBodyTestFeatureCard(onClick = onYouthBodyTest)
+        }
+
+        // 三大 人群 入口（教练 头像 静止 站立；卡片 一次性 淡入 + 克制 ripple）
         items(AgeGroup.entries.toList()) { age ->
             AgeCard(
                 age = age,
@@ -180,6 +186,60 @@ fun HomeScreen(
     }
 }
 
+/** 重点展示：青年体测模块入口（本次版本核心，置顶高亮卡）。 */
+@Composable
+private fun YouthBodyTestFeatureCard(onClick: () -> Unit) {
+    val color = Palette.accent
+    var hasEntered by remember { mutableStateOf(false) }
+    val enterAlpha by animateFloatAsState(
+        targetValue = if (hasEntered) 1f else 0f,
+        animationSpec = tween(durationMillis = 240),
+        label = "youthFeatureEnter"
+    )
+    LaunchedEffect(Unit) { hasEntered = true }
+
+    Row(
+        modifier = Modifier
+            .graphicsLayer { alpha = enterAlpha }
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Palette.card, RoundedCornerShape(24.dp))
+            .border(2.dp, color.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+            .padding(18.dp)
+            .clickable(
+                onClick = onClick,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Palette.accentSoft, RoundedCornerShape(22.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            CoachAvatar(ageId = "youth", size = 72.dp)
+        }
+        Column(Modifier.weight(1f)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Pill("重点 模块", color)
+                Pill("七项 体测", Palette.good)
+            }
+            Spacer(Modifier.height(5.dp))
+            Text("青年 · 体质 测试", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+            Spacer(Modifier.height(3.dp))
+            Text("体测 备考 · 专项 训练 · AI 动作 指导", fontSize = 13.sp, color = Palette.inkSoft)
+            Spacer(Modifier.height(6.dp))
+            Text("BMI · 肺活量 · 50m · 坐位体前屈 · 立定 跳远 · 引体/仰卧 · 1000/800m",
+                fontSize = 11.sp, color = Palette.inkSoft, lineHeight = 15.sp)
+        }
+        Text("→", fontSize = 24.sp, color = color, fontWeight = FontWeight.Bold)
+    }
+}
+
 /** 年龄段入口卡片（静止教练头像 + 一次性淡入 + 克制 ripple）。 */
 @Composable
 private fun AgeCard(age: AgeGroup, onClick: () -> Unit, icon: ImageVector) {
@@ -217,12 +277,13 @@ private fun AgeCard(age: AgeGroup, onClick: () -> Unit, icon: ImageVector) {
         Column(modifier = Modifier.weight(1f)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-                Text(age.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                Text(age.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                if (age.focus == "重点 展示") Pill("重点", color)
             }
             Spacer(Modifier.height(3.dp))
             Text(age.tagline, fontSize = 13.sp, color = Palette.inkSoft)
             Spacer(Modifier.height(8.dp))
-            Pill("含练 · 测 模块", color)
+            Pill(age.focus, color)
         }
         Text("→", fontSize = 24.sp, color = color, fontWeight = FontWeight.Bold)
     }

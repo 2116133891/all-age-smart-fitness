@@ -1,0 +1,19 @@
+{
+  "kind": "agnes_video",
+  "mode": "text_to_video",
+  "model": "agnes-video-2.5-flash",
+  "task_id": "video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby0yLjU7dmlkZW9faWQ6dmlkZW9fZjhkZjUzNDExOTI0MGViZDVkOGNjYjk5MWY0YzViM2MyN2IxZGU1ODcxODFlMGM2",
+  "original_prompt": "坐位体前屈动作要点与常见错误教学视频：坐直双腿伸直，缓慢前伸。",
+  "enhanced_prompt": "A clean instructional flexibility video demonstrating the seated forward reach (sit-and-reach), full-body side view. A young East Asian man, around 20 years old, wearing a teal-and-white athletic shirt and dark navy shorts, sits on a light floor with both legs extended straight out in front and feet flexed. Smooth slow motion: he exhales, rounds his back gently, and reaches his fingertips as far forward past his toes as possible (forward reach), holds briefly, then slowly returns to an upright seated position (return). Bright even studio lighting, stable static camera, clean minimal light background, realistic anatomy with two arms and two legs, smooth continuous movement with no sudden jumps or extra limbs. Emphasize keeping legs straight and reaching forward slowly, not bouncing.",
+  "aspect_ratio": "16:9",
+  "seconds": 4,
+  "actual_size": "720P",
+  "seed": null,
+  "remote_url": "https://platform-outputs.agnes-ai.space/videos/agnes-video-2.5/video_f8df534119240ebd5d8ccb991f4c5b3c27b1de587181e0c6.mp4",
+  "local_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042227-01a12932a69a79e2816f54039d32c75f.mp4",
+  "metadata_path": "C:\\Users\\23163\\Desktop\\城市大赛项目\\.agnes\\artifacts\\videos\\agnes-video-20261011-042227-01a12932a69a79e2816f54039d32c75f.json",
+  "mime_type": "video/mp4",
+  "bytes": 607885,
+  "duration_seconds": 4.0,
+  "created_at": "2026-10-11T04:22:27.738428+00:00"
+}
