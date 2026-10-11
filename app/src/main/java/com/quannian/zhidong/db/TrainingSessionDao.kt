@@ -32,6 +32,10 @@ interface TrainingSessionDao {
             " GROUP BY day ORDER BY day ASC"
     )
     suspend fun dailyStats(sinceMillis: Long): List<DailyStat>
+
+    /** 清空全部训练记录（设置页"数据管理"用）。 */
+    @Query("DELETE FROM training_sessions")
+    suspend fun clearAll(): Int
 }
 
 /** 按天聚合的统计结果。 */

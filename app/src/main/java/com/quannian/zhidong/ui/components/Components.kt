@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -71,9 +72,14 @@ fun Card(
 ) {
     Column(
         modifier = modifier
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(shape),
+                ambientColor = Color(0x1A2F4A6B),
+                spotColor = Color(0x1A2F4A6B)
+            )
             .clip(RoundedCornerShape(shape))
             .background(background, RoundedCornerShape(shape))
-            .border(1.dp, borderColor.copy(alpha = 0.6f), RoundedCornerShape(shape))
             .padding(16.dp)
     ) {
         content(this)

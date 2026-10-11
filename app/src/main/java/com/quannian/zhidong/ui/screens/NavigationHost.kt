@@ -1,72 +1,155 @@
 package com.quannian.zhidong.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.quannian.zhidong.ui.theme.Palette
 import com.quannian.zhidong.ui.theme.QuanNingTheme
 
+private const val TAB_HOME = "tab_home"
+private const val TAB_FEATURES = "tab_features"
+private const val TAB_ASSISTANT = "tab_assistant"
+private const val TAB_MINE = "tab_mine"
+private val TABS = setOf(TAB_HOME, TAB_FEATURES, TAB_ASSISTANT, TAB_MINE)
+
 /**
- * 全局导航。路由：
- *  splash → home → age(:child/:youth/:middle/:senior) → exercise → coach → follow → report
- *  新增入口：onboarding（引导）、profile（年龄性别选择）、bodyTest（体测）、
- *           assistant（AI 小助手）、wearable（运动手环）。
+ * 全局导航（企业级 · 底部导航栏版）。
+ * 4 个 tab（首页/功能/助手/我的）常驻；子页自动隐藏底栏；tab 切换保留各自子页栈。
  */
 @Composable
 fun NavigationHost(modifier: Modifier = Modifier) {
     QuanNingTheme {
-        Surface(modifier = modifier, color = MaterialTheme.colorScheme.background) {
-            val nav: NavHostController = rememberNavController()
-            NavHost(navController = nav, startDestination = "splash") {
+        val nav: NavHostController = rememberNavController()
+        val backStackEntry by nav.currentBackStackEntryAsState()
+        val currentRoute = backStackEntry?.destination?.route
+        val showBottomBar = currentRoute in TABS
+
+        val switchTab: (String) -> Unit = { target ->
+            nav.navigate(target) {
+                popUpTo(TAB_HOME) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+
+        Scaffold(
+            modifier = modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (showBottomBar) {
+                    NavigationBar {
+                        NavigationBarItem(
+                            selected = currentRoute == TAB_HOME,
+                            onClick = { switchTab(TAB_HOME) },
+                            icon = { Icon(Icons.Filled.Home, "首页") },
+                            label = { Text("首页", fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
+                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
+                                indicatorColor = Palette.accentSoft)
+                        )
+                        NavigationBarItem(
+                            selected = currentRoute == TAB_FEATURES,
+                            onClick = { switchTab(TAB_FEATURES) },
+                            icon = { Icon(Icons.Filled.Apps, "功能") },
+                            label = { Text("功能", fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
+                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
+                                indicatorColor = Palette.accentSoft)
+                        )
+                        NavigationBarItem(
+                            selected = currentRoute == TAB_ASSISTANT,
+                            onClick = { switchTab(TAB_ASSISTANT) },
+                            icon = { Icon(Icons.Filled.SmartToy, "助手") },
+                            label = { Text("助手", fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
+                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
+                                indicatorColor = Palette.accentSoft)
+                        )
+                        NavigationBarItem(
+                            selected = currentRoute == TAB_MINE,
+                            onClick = { switchTab(TAB_MINE) },
+                            icon = { Icon(Icons.Filled.Person, "我的") },
+                            label = { Text("我的", fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Palette.accent, selectedTextColor = Palette.accent,
+                                unselectedIconColor = Palette.inkSoft, unselectedTextColor = Palette.inkSoft,
+                                indicatorColor = Palette.accentSoft)
+                        )
+                    }
+                }
+            }
+        ) {
+            NavHost(navController = nav, startDestination = "splash", modifier = Modifier.fillMaxSize()) {
                 composable("splash") {
-                    SplashScreen(
-                        onDone = {
-                            nav.navigate("onboarding") { popUpTo("splash") { inclusive = true } }
-                        }
-                    )
+                    SplashScreen(onDone = {
+                        nav.navigate("onboarding") { popUpTo("splash") { inclusive = true } }
+                    })
                 }
-
-                // 引导页（介绍 App 能做什么，三类人群各讲作用）
                 composable("onboarding") {
-                    OnboardingScreen(
-                        onFinish = {
-                            nav.navigate("profile") {
-                                popUpTo("onboarding") { inclusive = true }
-                            }
-                        }
-                    )
+                    OnboardingScreen(onFinish = {
+                        nav.navigate("profile") { popUpTo("onboarding") { inclusive = true } }
+                    })
                 }
-
-                // 年龄 + 性别选择（写入 ProfileStore，个性化）
                 composable("profile") {
-                    ProfileScreen(
-                        onBack = { nav.popBackStack() },
-                        onDone = {
-                            nav.navigate("home") {
-                                popUpTo("profile") { inclusive = true }
-                            }
-                        }
-                    )
+                    ProfileScreen(onBack = { nav.popBackStack() }, onDone = { switchTab(TAB_HOME) })
                 }
-
-                composable("home") {
+                composable(TAB_HOME) {
                     HomeScreen(
                         onPickAge = { nav.navigate("age/$it") },
                         onMyTraining = { nav.navigate("training") },
                         onAiDiagnose = { nav.navigate("videoPick") },
-                        onAssistant = { nav.navigate("assistant") },
+                        onAssistant = { switchTab(TAB_ASSISTANT) },
                         onWearable = { nav.navigate("wearable") },
                         onProfile = { nav.navigate("profile") }
                     )
                 }
-                composable("age/{id}") { backStackEntry ->
-                    val id = backStackEntry.arguments?.getString("id") ?: "youth"
+                composable(TAB_FEATURES) {
+                    FeaturesScreen(
+                        onBodyTest = { nav.navigate("bodyTest") },
+                        onVideoPick = { nav.navigate("videoPick") },
+                        onWearable = { nav.navigate("wearable") },
+                        onAssistant = { switchTab(TAB_ASSISTANT) },
+                        onTraining = { nav.navigate("training") },
+                        onProfile = { nav.navigate("profile") }
+                    )
+                }
+                composable(TAB_ASSISTANT) {
+                    AssistantScreen(onBack = { switchTab(TAB_HOME) })
+                }
+                composable(TAB_MINE) {
+                    MineScreen(
+                        onTraining = { nav.navigate("training") },
+                        onWearable = { nav.navigate("wearable") },
+                        onProfile = { nav.navigate("profile") },
+                        onBodyTest = { nav.navigate("bodyTest") },
+                        onSettings = { nav.navigate("settings") }
+                    )
+                }
+                composable("age/{id}") { bse ->
+                    val id = bse.arguments?.getString("id") ?: "youth"
                     AgeScreen(
                         id = id,
                         onBack = { nav.popBackStack() },
@@ -75,13 +158,10 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     )
                 }
                 composable("bodyTest") {
-                    BodyTestScreen(
-                        onBack = { nav.popBackStack() },
-                        onGoTrain = { nav.popBackStack() }
-                    )
+                    BodyTestScreen(onBack = { nav.popBackStack() }, onGoTrain = { nav.popBackStack() })
                 }
-                composable("exercise/{id}") { backStackEntry ->
-                    val id = backStackEntry.arguments?.getString("id") ?: ""
+                composable("exercise/{id}") { bse ->
+                    val id = bse.arguments?.getString("id") ?: ""
                     ExerciseScreen(
                         exerciseId = id,
                         onBack = { nav.popBackStack() },
@@ -89,16 +169,16 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         onStartFollow = { nav.navigate("follow/$id") }
                     )
                 }
-                composable("coach/{id}") { backStackEntry ->
-                    val id = backStackEntry.arguments?.getString("id") ?: ""
+                composable("coach/{id}") { bse ->
+                    val id = bse.arguments?.getString("id") ?: ""
                     CoachScreen(
                         exerciseId = id,
                         onBack = { nav.popBackStack() },
                         onStartFollow = { nav.navigate("follow/$id") }
                     )
                 }
-                composable("follow/{id}") { backStackEntry ->
-                    val id = backStackEntry.arguments?.getString("id") ?: ""
+                composable("follow/{id}") { bse ->
+                    val id = bse.arguments?.getString("id") ?: ""
                     FollowAlongScreen(
                         exerciseId = id,
                         onBack = { nav.popBackStack() },
@@ -114,47 +194,41 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                             nav.popBackStack()
                             nav.navigate("follow/$exId") {}
                         },
-                        onHome = { nav.popBackStack("home", inclusive = false) }
+                        onHome = { switchTab(TAB_HOME) }
                     )
                 }
                 composable("training") {
                     MyTrainingScreen(onBack = { nav.popBackStack() })
                 }
-
-                // AI 小助手（本地离线问答）
-                composable("assistant") {
-                    AssistantScreen(onBack = { nav.popBackStack() })
-                }
-
-                // 运动手环（演示连接 + 数据维度）
                 composable("wearable") {
                     WearableScreen(onBack = { nav.popBackStack() })
                 }
-
-                // AI 动作诊断（视频复盘闭环，spec §十一~§二十）
+                composable("settings") {
+                    SettingsScreen(
+                        onBack = { nav.popBackStack() },
+                        onProfile = { nav.navigate("profile") },
+                        onAssistant = { switchTab(TAB_ASSISTANT) },
+                        onWearable = { nav.navigate("wearable") }
+                    )
+                }
                 composable("videoPick") {
                     VideoPickScreen(
                         onBack = { nav.popBackStack() },
                         onStartAnalysis = { kind, name, ageId, uriStr ->
-                            com.quannian.zhidong.video.VideoAnalysisChannel.pending(
-                                kind, name, ageId, uriStr
-                            )
-                            nav.navigate("videoAnalysis") { popUpTo("home") { inclusive = false } }
+                            com.quannian.zhidong.video.VideoAnalysisChannel.pending(kind, name, ageId, uriStr)
+                            nav.navigate("videoAnalysis")
                         }
                     )
                 }
                 composable("videoAnalysis") {
-                    VideoAnalysisScreen(
-                        onBack = { nav.popBackStack() },
-                        onDone = { nav.navigate("videoReport") }
-                    )
+                    VideoAnalysisScreen(onBack = { nav.popBackStack() }, onDone = { nav.navigate("videoReport") })
                 }
                 composable("videoReport") {
                     VideoReportScreen(
                         onBack = { nav.popBackStack() },
                         onCorrect = { exId, errorType ->
                             com.quannian.zhidong.video.VideoAnalysisChannel.markCorrection(exId, errorType)
-                            nav.popBackStack("home", inclusive = false)
+                            nav.popBackStack(TAB_HOME, inclusive = false)
                             nav.navigate("coach/$exId")
                         }
                     )

@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
-import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
@@ -79,18 +78,40 @@ fun HomeScreen(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 顶部品牌区
+        // 顶部品牌 hero（京东健康式渐变卡：问候 + 画像 + 数字人形象）
         item {
-            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("全龄智动", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Palette.ink)
-                    Pill("你的画像 · ${ProfileStore.ageLabel(profile.ageId)}", Palette.ageColor(profile.ageId))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(Palette.accent, Palette.middle, Palette.senior)
+                        ),
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("全龄智动", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = androidx.compose.ui.graphics.Color.White)
+                    Spacer(Modifier.height(4.dp))
+                    Text("数字人 · ${ProfileStore.ageLabel(profile.ageId)} · ${ProfileStore.genderLabel(profile.gender)}",
+                        fontSize = 13.sp, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f))
+                    Spacer(Modifier.height(10.dp))
+                    Text("选择今天想练或想测的项目 →", fontSize = 13.sp,
+                        color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(Modifier.height(4.dp))
-                Text("数字人智能运动指导", fontSize = 14.sp, color = Palette.inkSoft, letterSpacing = 1.sp)
-                Spacer(Modifier.height(20.dp))
-                Text("选择您的运动陪练", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
-                Spacer(Modifier.height(14.dp))
+                // 数字人形象（当前画像年龄）
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(
+                        com.quannian.zhidong.ui.components.CoachVisual.coachResource(profile.ageId)
+                    ),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.size(72.dp)
+                )
             }
         }
 
@@ -100,7 +121,6 @@ fun HomeScreen(
                 age = age,
                 onClick = { onPickAge(age.id) },
                 icon = when (age) {
-                    AgeGroup.CHILD -> Icons.Filled.ChildCare
                     AgeGroup.MIDDLE -> Icons.Filled.FitnessCenter
                     AgeGroup.SENIOR -> Icons.Filled.Accessibility
                     else -> Icons.Filled.SportsTennis

@@ -25,7 +25,6 @@ data class AgeProfile(
         val MIDDLE = AgeProfile(0.35f, 0.30f, 0.25f, 0.10f)
 
         fun forAge(age: AgeGroup): AgeProfile = when (age) {
-            AgeGroup.CHILD -> AgeProfile(0.30f, 0.20f, 0.30f, 0.20f)
             AgeGroup.YOUTH -> DEFAULT
             AgeGroup.MIDDLE -> MIDDLE
             AgeGroup.SENIOR -> AgeProfile(0.20f, 0.25f, 0.35f, 0.20f)
@@ -33,7 +32,6 @@ data class AgeProfile(
 
         fun forAge(id: String): AgeProfile = forAge(
             when (id) {
-                "child" -> AgeGroup.CHILD
                 "middle" -> AgeGroup.MIDDLE
                 "senior" -> AgeGroup.SENIOR
                 else -> AgeGroup.YOUTH

@@ -3,8 +3,10 @@ package com.quannian.zhidong.model
 /**
  * 年龄段定义。四个入口对应不同的数字人教练与运动内容。
  *  - [title]：入口卡片主标题
- *  - [subtitle]：副标题（气质词，如"活泼 · 明亮 · 运动感"）
- *  - [tagline]：参赛版首页展示的行为标签（如"轻运动 · 快乐成长"）
+ *  - [subtitle]：副标题（气质词）
+ *  - [tagline]：首页展示的行为标签
+ *
+ *  企业级调整（10-10）：移除儿童组，产品定位聚焦 青年 / 中年 / 银龄 三大人群。
  */
 enum class AgeGroup(
     val id: String,
@@ -12,7 +14,6 @@ enum class AgeGroup(
     val subtitle: String,
     val tagline: String
 ) {
-    CHILD("child", "儿童运动教练", "活泼 · 明亮 · 运动感", "轻运动 · 快乐成长"),
     YOUTH("youth", "青年运动教练", "科技 · 简洁 · 现代", "科学运动 · 体态纠正"),
     MIDDLE("middle", "中年运动教练", "高效 · 减压 · 平衡", "下班健身 · 肩颈缓解"),
     SENIOR("senior", "银龄运动教练", "稳重 · 温和 · 健康", "舒缓运动 · 康养防跌")

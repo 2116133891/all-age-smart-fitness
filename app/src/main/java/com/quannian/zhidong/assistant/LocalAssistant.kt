@@ -119,7 +119,6 @@ object LocalAssistant {
 
     /** 根据年龄段推荐该练什么（用于"练什么"这类问题）。 */
     fun recommendByAge(age: AgeGroup): String = when (age) {
-        AgeGroup.CHILD -> "儿童推荐：跳绳、开合跳、基础拉伸，游戏化更能坚持。"
         AgeGroup.YOUTH -> "青年推荐：深蹲、肩颈拉伸、瑜伽/力量训练，兼顾体态与减脂。"
         AgeGroup.MIDDLE -> "中年推荐：下班力量健身 + 肩颈缓解，改善久坐代谢。"
         AgeGroup.SENIOR -> "银龄推荐：八段锦、太极、舒缓拉伸，重在稳与柔、防跌倒。"

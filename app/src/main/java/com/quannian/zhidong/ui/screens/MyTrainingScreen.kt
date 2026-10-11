@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -60,6 +63,8 @@ fun MyTrainingScreen(
     var summary by remember { mutableStateOf(TrainingRepository.Summary(0, 0, 0, 0, null)) }
     var dailyStats by remember { mutableStateOf<List<DailyStat>>(emptyList()) }
     var recent by remember { mutableStateOf<List<TrainingSession>>(emptyList()) }
+    var streak by remember { mutableStateOf(0) }
+    var bestScore by remember { mutableStateOf(0) }
 
     // 异步加载（Room suspend 调用走 IO 线程，不阻塞 UI）
     LaunchedEffect(Unit) {
@@ -67,9 +72,31 @@ fun MyTrainingScreen(
         val s = withContext(Dispatchers.IO) { repo.summary() }
         val ds = withContext(Dispatchers.IO) { repo.dailyStats(7) }
         val r = withContext(Dispatchers.IO) { repo.recent(8) }
+        val all = withContext(Dispatchers.IO) { repo.all() }
         summary = s
         dailyStats = ds
         recent = r
+        // 连续训练天数（按"自然日"统计；从最新一天往回连续）
+        val daySet = all.map { it.dateTime / 86400_000L }.toSet()
+        var cur = (System.currentTimeMillis() / 86400_000L).toLong()
+        // 若今天没练，允许从昨天起算（更友好）
+        if (cur !in daySet) cur -= 1
+        var cnt = 0
+        while (cur in daySet) { cnt++; cur -= 1 }
+        streak = cnt
+        bestScore = all.maxOfOrNull { it.score } ?: 0
+    }
+
+    // 成就徽章（按真实数据解锁）
+    val achievements = remember(streak, summary, bestScore) {
+        listOf(
+            Triple("首次训练", "完成 1 次跟练", summary.sessionCount >= 1),
+            Triple("持之以恒", "连续 3 天训练", streak >= 3),
+            Triple("百次达人", "累计 100 次动作", summary.totalRepetitions >= 100),
+            Triple("满分之星", "单次 95+ 分", bestScore >= 95),
+            Triple("七日之约", "连续 7 天训练", streak >= 7),
+            Triple("坚持一周", "累计 7 天有记录", dailyStats.count { it.sessions > 0 } >= 7)
+        )
     }
 
     LazyColumn(
@@ -94,6 +121,39 @@ fun MyTrainingScreen(
                 StatCard("总次数", "${summary.totalRepetitions}", Modifier.weight(1f))
                 StatCard("平均得分", "${summary.avgScore}", Modifier.weight(1f))
                 StatCard("总时长", "${summary.totalDurationSec / 60} 分", Modifier.weight(1f))
+            }
+        }
+
+        // 连续训练天数 + 成就徽章（企业级成长感）
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Palette.accentSoft, RoundedCornerShape(16.dp))
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("🔥", fontSize = 30.sp)
+                Column {
+                    Text("连续训练", fontSize = 12.sp, color = Palette.inkSoft)
+                    Text("$streak 天", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Palette.accent)
+                }
+                Spacer(Modifier.weight(1f))
+                Text("坚持就是进步", fontSize = 12.sp, color = Palette.inkSoft)
+            }
+        }
+
+        item {
+            Card() {
+                Text("成就徽章", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    achievements.forEach { (title, desc, unlocked) ->
+                        AchievementBadge(title, desc, unlocked, Modifier.weight(1f))
+                    }
+                }
             }
         }
 
@@ -152,6 +212,34 @@ private fun StatCard(label: String, value: String, modifier: Modifier) {
         Text(label, fontSize = 11.sp, color = Palette.inkSoft)
         Spacer(Modifier.height(2.dp))
         Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Palette.accent)
+    }
+}
+
+/** 成就徽章（解锁=彩色，未解锁=灰）。 */
+@Composable
+private fun AchievementBadge(title: String, desc: String, unlocked: Boolean, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (unlocked) Palette.good.copy(alpha = 0.12f) else Palette.cardSoft,
+                RoundedCornerShape(12.dp)
+            )
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(if (unlocked) "🏆" else "🔒", fontSize = 22.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (unlocked) Palette.good else Palette.inkSoft,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(desc, fontSize = 10.sp, color = Palette.inkSoft,
+            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
 }
 

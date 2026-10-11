@@ -12,81 +12,15 @@ import com.quannian.zhidong.model.Exercise
  */
 object ExerciseRepository {
 
-    fun all(): List<Exercise> = child() + youth() + middle() + senior()
+    fun all(): List<Exercise> = youth() + middle() + senior()
 
     fun byAgeGroup(age: AgeGroup): List<Exercise> = when (age) {
-        AgeGroup.CHILD -> child()
         AgeGroup.YOUTH -> youth()
         AgeGroup.MIDDLE -> middle()
         AgeGroup.SENIOR -> senior()
     }
 
     fun find(id: String): Exercise? = all().firstOrNull { it.id == id }
-
-    private fun child(): List<Exercise> = listOf(
-        Exercise(
-            id = "child-jumprope",
-            ageGroup = AgeGroup.CHILD,
-            name = "跳绳",
-            icon = "🪀",
-            tagline = "轻盈起跳 · 协调节奏",
-            duration = "5 分钟",
-            level = "入门",
-            steps = listOf(
-                "双脚并拢站直，手腕放松，绳体自然垂于身后",
-                "单手摇绳，绳从脚后绕过，同时双脚轻跳",
-                "跳起高度以绳体能通过为准，落地轻缓",
-                "保持节奏均匀，先求稳再提速"
-            ),
-            cautions = listOf(
-                "选空旷场地，避开障碍物",
-                "落地用前脚掌缓冲，避免崴脚",
-                "感到不适立即停止休息"
-            ),
-            coachIntro = "嗨，小运动家！今天我们一起练习跳绳。站稳位置，手腕放松，我们开始啦！",
-            analysisKind = "jumprope",
-            targetReps = 10,
-            scene = "日常"
-        ),
-        Exercise(
-            id = "child-stretch",
-            ageGroup = AgeGroup.CHILD,
-            name = "基础拉伸",
-            icon = "🧘",
-            tagline = "舒展身体 · 热身放松",
-            duration = "3 分钟",
-            level = "入门",
-            steps = listOf(
-                "双臂向上伸展，抬头吸气",
-                "缓慢侧弯，拉伸体侧",
-                "弯腰触碰脚尖，保持膝盖微曲"
-            ),
-            cautions = listOf("动作放慢，不要用力过猛", "出现疼痛立即停止"),
-            coachIntro = "准备好了吗？现在我们慢慢拉伸，像小树苗一样伸展身体。",
-            analysisKind = "stretch",
-            targetReps = 6,
-            scene = "日常"
-        ),
-        Exercise(
-            id = "child-jack",
-            ageGroup = AgeGroup.CHILD,
-            name = "开合跳",
-            icon = "🐇",
-            tagline = "全身协调 · 提升活力",
-            duration = "5 分钟",
-            level = "进阶",
-            steps = listOf(
-                "双脚并拢站立，双臂垂于体侧",
-                "开跳时双脚分开，双臂上举",
-                "合跳时回到并拢起始位置"
-            ),
-            cautions = listOf("落地轻柔", "保持核心收紧"),
-            coachIntro = "开合跳来啦！像小兔子一样，跳得开心又不累。",
-            analysisKind = "jack",
-            targetReps = 10,
-            scene = "日常"
-        )
-    )
 
     private fun youth(): List<Exercise> = listOf(
         Exercise(

@@ -51,7 +51,6 @@ fun CoachMotionView(
     modifier: Modifier = Modifier
 ) {
     val age = when (ageId) {
-        "child" -> com.quannian.zhidong.model.AgeGroup.CHILD
         "senior" -> com.quannian.zhidong.model.AgeGroup.SENIOR
         else -> com.quannian.zhidong.model.AgeGroup.YOUTH
     }
@@ -82,17 +81,14 @@ private fun DrawScope.drawCoachFigure(
 
     // 年龄差异化的体型参数
     val headR = when (age) {
-        com.quannian.zhidong.model.AgeGroup.CHILD -> w * 0.16f
         com.quannian.zhidong.model.AgeGroup.SENIOR -> w * 0.11f
         else -> w * 0.085f
     }
     val torsoH = when (age) {
-        com.quannian.zhidong.model.AgeGroup.CHILD -> h * 0.20f
         com.quannian.zhidong.model.AgeGroup.SENIOR -> h * 0.26f
         else -> h * 0.30f
     }
     val limbW = when (age) {
-        com.quannian.zhidong.model.AgeGroup.CHILD -> w * 0.05f
         com.quannian.zhidong.model.AgeGroup.SENIOR -> w * 0.035f
         else -> w * 0.03f
     }

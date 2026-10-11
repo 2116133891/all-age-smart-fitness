@@ -31,12 +31,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import com.quannian.zhidong.ui.components.CoachAvatar
 import com.quannian.zhidong.ui.theme.Palette
 
 /**
- * 引导页：介绍 App 能做什么。
- *  横向滑动 6 张卡（青年×2 / 中年×2 / 银龄×2，覆盖"体测·日常训练 / 下班健身·减压 / 日常康养·康复"），
- *  逐张左滑浏览，告诉三类人群各自"能得到什么"，末页进入 App。
+ * 全屏引导页（企业级 · 对标京东健康 onboarding）：
+ *  3 页可滑动，每页用**对应年龄段数字人形象**（青年/中年/银龄，无儿童）主打"TA 能帮到你什么"。
+ *  - 右上角"跳过"直达下一步。
+ *  - 底部圆点指示 + 主 CTA（前 2 页"下一步"，末页"立即开始"）。
+ *  - 整页沉浸式全屏（fillMaxSize + 品牌色渐变），不是小卡片。
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -44,51 +47,72 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier,
     onFinish: () -> Unit
 ) {
-    val pages = rememberPages()
+    val pages = remember { onboardingPages() }
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
+    val last = pagerState.currentPage == pages.lastIndex
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Palette.bg)
-            .padding(horizontal = 24.dp, vertical = 30.dp)
+            .background(
+                Brush.bg(pages[pagerState.currentPage].color)
+            )
+            .padding(horizontal = 28.dp)
     ) {
-        Spacer(Modifier.height(4.dp))
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) { index ->
-            OnboardingPage(page = pages[index])
+        // 顶部：跳过
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color.Black.copy(alpha = 0.08f), RoundedCornerShape(999.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onFinish() }
+                    .padding(horizontal = 18.dp, vertical = 8.dp)
+            ) {
+                Text("跳过", fontSize = 14.sp, color = Palette.inkSoft, fontWeight = FontWeight.SemiBold)
+            }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
+
+        // 全屏内容（3 页数字人）
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        ) { index ->
+            BoardPageView(page = pages[index])
+        }
+
         // 指示点
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.Center
         ) {
             pages.indices.forEach { i ->
-                val selected = i == pagerState.currentPage
+                val sel = i == pagerState.currentPage
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 4.dp)
-                        .size(if (selected) 10.dp else 8.dp)
+                        .size(if (sel) 10.dp else 8.dp)
                         .clip(CircleShape)
-                        .background(if (selected) Palette.accent else Palette.line)
+                        .background(if (sel) pages[i].color else Color.White.copy(alpha = 0.5f))
                 )
             }
         }
-        Spacer(Modifier.height(20.dp))
 
-        val last = pagerState.currentPage == pages.lastIndex
+        // 主 CTA
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(top = 12.dp, bottom = 28.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Palette.accent, RoundedCornerShape(16.dp))
+                .background(pages[pagerState.currentPage].color, RoundedCornerShape(16.dp))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -100,93 +124,79 @@ fun OnboardingScreen(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = if (last) "开始体验全龄智动" else "下一步 · ${pagerState.currentPage + 1}/${pages.size}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+                text = if (last) "立即开始体验" else "下一步 · ${pagerState.currentPage + 1}/3",
+                fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White,
                 textAlign = TextAlign.Center
             )
         }
     }
 }
 
-private fun rememberPages(): List<BoardPage> {
-    val y = Palette.youth
-    val m = Palette.middle
-    val s = Palette.senior
-    return listOf(
-        BoardPage("青年 · 体测 & 日常训练", "科学运动 · 看见进步", y, "📊",
-            listOf("AI 动作诊断 + 实时跟练计分", "深蹲 / 开合跳 / 瑜伽 规范评分", "运动前后对比，量化进步")),
-        BoardPage("青年 · 体态纠正", "久坐族救星", y, "🙆",
-            listOf("肩颈拉伸专项，缓解办公酸痛", "四维评分盯姿势（幅度/躯干/对称/完整）", "数字教练示范，动作不再瞎练")),
-        BoardPage("中年 · 下班健身", "高效燃脂 & 减压", m, "🏋️",
-            listOf("下班黄金时段 50 分钟力量+有氧方案", "肩颈 / 腰椎 办公久坐专项", "心率区间监测，强度不超量")),
-        BoardPage("中年 · 压力管理", "工作生活平衡", m, "⚖️",
-            listOf("5 分钟肩颈减压小练，工位即做", "助眠拉伸，运动改善睡眠", "碎片时间运动，不挤占通勤")),
-        BoardPage("银龄 · 日常康养", "缓而稳 · 防跌倒", s, "🍃",
-            listOf("八段锦 / 太极 传统功法每日养", "单腿站平衡训练，防跌倒", "动作幅度按年龄自动放缓")),
-        BoardPage("银龄 · 康复辅助", "关节友好", s, "🌿",
-            listOf("膝盖 / 肩关节低冲击版本", "康复向评估（稳·柔·对称）", "基础病量力而行，先问医生"))
-    )
-}
-
-/** 单张引导卡：年龄段色条 + 主标题 + 三点作用。 */
+/** 单页：数字人 + 年龄段 + 主标题 + 三点作用。 */
 @Composable
-private fun OnboardingPage(page: BoardPage) {
+private fun BoardPageView(page: BoardPage) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Text(page.kicker, fontSize = 15.sp, color = page.color, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(page.title, fontSize = 26.sp, color = Palette.ink, fontWeight = FontWeight.ExtraBold)
+        Spacer(Modifier.height(20.dp))
+        // 数字人形象（全屏大尺寸）
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(page.color.copy(alpha = 0.12f), RoundedCornerShape(28.dp))
-                .padding(28.dp)
+                .weight(1f),
+            contentAlignment = Alignment.Center
         ) {
-            Column {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .clip(CircleShape)
-                            .background(page.color),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(page.emoji, fontSize = 30.sp)
-                    }
-                    Column {
-                        Text(page.group, fontSize = 12.sp, color = page.color, fontWeight = FontWeight.SemiBold)
-                        Text(page.title, fontSize = 21.sp, color = Palette.ink, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Spacer(Modifier.height(22.dp))
-                page.points.forEach { p ->
-                    Row(
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("●", color = page.color, fontSize = 12.sp)
-                        Text(
-                            p,
-                            fontSize = 15.sp,
-                            color = Palette.ink,
-                            modifier = Modifier.weight(1f),
-                            lineHeight = 22.sp
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
+            CoachAvatar(ageId = page.ageId, size = 260.dp)
+        }
+        Spacer(Modifier.height(12.dp))
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            page.points.forEach { p ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Text("●", color = page.color, fontSize = 10.sp)
+                    Text(p, fontSize = 15.sp, color = Palette.ink, modifier = Modifier.weight(1f), lineHeight = 22.sp)
                 }
             }
         }
     }
 }
 
+private fun onboardingPages(): List<BoardPage> = listOf(
+    BoardPage("youth", Palette.youth, "青年 · 科学运动", "科学训练 · 体态纠正",
+        listOf("AI 动作诊断 + 实时跟练计分", "深蹲 / 瑜伽 / 肩颈 规范四维评分", "前后对比，量化看见进步")),
+    BoardPage("middle", Palette.middle, "中年 · 高效减压", "下班健身 · 肩颈缓解",
+        listOf("下班黄金时段 50 分钟力量+有氧", "肩颈 / 腰椎 久坐减压专项", "心率区间监测，强度不超量")),
+    BoardPage("senior", Palette.senior, "银龄 · 康养防跌", "舒缓运动 · 康复辅助",
+        listOf("八段锦 / 太极 每日康养", "单腿站平衡训练，预防跌倒", "动作幅度按年龄自动放缓"))
+)
+
 data class BoardPage(
-    val group: String,
-    val title: String,
+    val ageId: String,
     val color: Color,
-    val emoji: String,
+    val kicker: String,
+    val title: String,
     val points: List<String>
 )
+
+/** 全屏背景：白底 + 该年龄段主色的顶部柔光渐变，企业级沉浸感。 */
+internal object Brush {
+    @Composable
+    fun bg(color: Color): androidx.compose.ui.graphics.Brush =
+        androidx.compose.ui.graphics.Brush.verticalGradient(
+            colors = listOf(
+                color.copy(alpha = 0.10f),
+                androidx.compose.ui.graphics.Color(0xFFF5F7FB),
+                androidx.compose.ui.graphics.Color(0xFFF5F7FB)
+            ),
+            startY = 0f,
+            endY = 900f
+        )
+}
