@@ -70,7 +70,8 @@ fun TeachingVideoPlayer(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String = "",
-    onFullScreen: (() -> Unit)? = null
+    onFullScreen: (() -> Unit)? = null,
+    loop: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -117,6 +118,9 @@ fun TeachingVideoPlayer(
                 }
             }
             player.addListener(listener)
+            if (loop) {
+                player.setRepeatMode(Player.REPEAT_MODE_ALL)
+            }
             player.playWhenReady = true
             player.prepare()
         } catch (e: Exception) {
@@ -137,7 +141,7 @@ fun TeachingVideoPlayer(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.ink,
+        if (title.isNotBlank()) Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.ink,
             modifier = Modifier.padding(horizontal = 4.dp))
         if (subtitle.isNotBlank()) {
             Text(subtitle, fontSize = 12.sp, color = Palette.inkSoft,

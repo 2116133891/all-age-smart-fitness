@@ -151,7 +151,7 @@ private fun BoardPageView(page: BoardPage) {
                 .weight(1f),
             contentAlignment = Alignment.Center
         ) {
-            CoachAvatar(ageId = page.ageId, size = 260.dp)
+            CoachAvatar(ageId = page.ageId, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), size = 200.dp)
         }
         Spacer(Modifier.height(12.dp))
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {

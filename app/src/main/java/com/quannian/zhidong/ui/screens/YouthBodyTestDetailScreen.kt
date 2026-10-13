@@ -21,9 +21,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -204,15 +207,21 @@ fun YouthBodyTestDetailScreen(
                 }
 
                 Spacer(Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(color, RoundedCornerShape(14.dp))
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onTrain() }
-                        .padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center
+                Button(
+                    onClick = onTrain,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = color),
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = 14.dp, bottom = 14.dp, start = 16.dp, end = 16.dp)
                 ) {
-                    Text("生成 备考 训练 计划 →", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    Icon(
+                        Icons.Filled.FitnessCenter, null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text("生成备考训练计划", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                 }
             }
         }

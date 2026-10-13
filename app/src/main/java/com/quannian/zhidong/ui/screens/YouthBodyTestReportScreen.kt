@@ -18,8 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +66,10 @@ fun YouthBodyTestReportScreen(
     val repo = remember { BodyTestRepository(context) }
     var report by remember { mutableStateOf<BodyTestRepository.BodyTestReport?>(null) }
     var allHist by remember { mutableStateOf<Map<String, List<BodyTestResult>>>(emptyMap()) }
+    // 防重复点击：进入计划后置位；页面重组时保持，避免重复跳转
+    var planNavigated by remember { mutableStateOf(false) }
+    // 每次进入报告页（key = repo）重置防抖标志，配合导航返回
+    LaunchedEffect(repo) { planNavigated = false }
 
     LaunchedEffect(repo) {
         val planId = repo.latestPlanId()
@@ -181,19 +188,36 @@ fun YouthBodyTestReportScreen(
             }
         }
 
-        // 行动
+        // 行动：正式 Material Button（防重复点击 + 正确导航 + 返回）
+
+
+
         item {
-            Box(
-                modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Palette.accent, RoundedCornerShape(14.dp))
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center
+            Button(
+                onClick = {
+                    if (planNavigated) return@Button
+                    planNavigated = true
+                    onPlan()
+                },
+                enabled = !planNavigated,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Palette.accent),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    top = 14.dp, bottom = 14.dp, start = 16.dp, end = 16.dp)
             ) {
-                // 简单 按钮 样式（无 独立 导航 参数，回 计划）
-                Text("去 生成 训练 计划", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    color = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.clickable { onPlan() })
+                Icon(
+                    Icons.Filled.FitnessCenter, null,
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    "去生成备考训练计划",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = androidx.compose.ui.graphics.Color.White
+                )
             }
         }
         item { Spacer(Modifier.height(12.dp)) }

@@ -176,9 +176,11 @@ object VideoAnalysisEngine {
         }
 
         // 综合评分（整段视频）
+        // 诚实原则（P0-1）：无有效人体帧（全程无人/不可读）时，维度默认 0 而非 1f，
+        // 避免"全程没人却拿到 posture/symmetry=100 的高分"——不伪造结果。
         val avgDepth = if (validFrameCount > 0) depthSum / validFrameCount else 0f
-        val avgPosture = if (validFrameCount > 0) postureSum / validFrameCount else 1f
-        val avgSym = if (validFrameCount > 0) symSum / validFrameCount else 1f
+        val avgPosture = if (validFrameCount > 0) postureSum / validFrameCount else 0f
+        val avgSym = if (validFrameCount > 0) symSum / validFrameCount else 0f
         val overall = ScoreCalculator.calculate(
             repCount = repCount,
             targetReps = targetReps,

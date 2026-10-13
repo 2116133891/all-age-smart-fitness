@@ -21,29 +21,36 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quannian.zhidong.repository.ExerciseRepository
+import com.quannian.zhidong.repository.TeachingVideoRepository
 import com.quannian.zhidong.ui.components.Card
-import com.quannian.zhidong.ui.components.CoachMotionView
-import com.quannian.zhidong.ui.components.CoachState
-import com.quannian.zhidong.ui.components.CoachTeachingPlayer
+import com.quannian.zhidong.ui.components.CoachAvatar
 import com.quannian.zhidong.ui.components.Pill
+import com.quannian.zhidong.ui.components.TeachingVideoPlayer
 import com.quannian.zhidong.ui.theme.Palette
 
 /**
  * 数字人教学页（竞赛演示级）。
  *
- *  核心：数字人大尺寸动作演示（35%~45% 页面高度，spec §十九）+ 动作/文字同步（§十七）。
- *  - 用 [CoachTeachingPlayer] 播放该动作的演示序列，数字人**真的做这个动作**
- *    （深蹲会屈膝下蹲、侧拉伸会侧倾、开合跳会分腿举臂…），不再是统一上下跳。
- *  - "开始跟练"进入跟练页。
+ *  核心：大尺寸动作示范（占约 45% 页面高度）+ 动作/文字同步。
+ *  P0-2 修复（对照"中年/银龄仍显示旧火柴人"）：
+ *   - 教学舞台不再用 CoachSpriteView/CoachMotionView 的 2D 关节火柴人；
+ *     改按 exerciseId 从 [TeachingVideoRepository.teachingVideoFor] 取**匹配动作**的
+ *     真实 AIGC 示范视频（八段锦→八段锦、太极→太极、肩颈→肩颈…），用 [TeachingVideoPlayer]
+ *     循环播放，动作与页面动作严格一致，不做泛化替代。
+ *   - 该动作无专属示范视频时（如深蹲/引体等），走**诚实**卡片：
+ *     显示该动作的要领步骤 + 安全提示，绝不塞一个不匹配的视频冒充。
+ *   - 顶部保留小 [CoachAvatar] 做"数字教练"身份识别（静止形象），主体换成真视频。
  */
 @Composable
 fun CoachScreen(
@@ -52,6 +59,7 @@ fun CoachScreen(
     onBack: () -> Unit,
     onStartFollow: () -> Unit
 ) {
+    val context = LocalContext.current
     val ex = ExerciseRepository.find(exerciseId) ?: return
     val age = ex.ageGroup
     val color = Palette.ageColor(age.id)
@@ -73,6 +81,14 @@ fun CoachScreen(
             ?: com.quannian.zhidong.model.ErrorType.POSTURE_DRIFT
         com.quannian.zhidong.video.CorrectionWording.of(err)
     }
+
+    // P0-2：该动作匹配的"真实示范视频"（按 exerciseId 严格匹配，无匹配返回 null）。
+    val teachVideo = remember(exerciseId) {
+        TeachingVideoRepository.teachingVideoFor(exerciseId)
+    }
+    val videoUsable = teachVideo != null &&
+        teachVideo.assetPath.isNotBlank() &&
+        TeachingVideoRepository.assetExists(context, teachVideo.assetPath)
 
     LazyColumn(
         modifier = modifier
@@ -116,7 +132,7 @@ fun CoachScreen(
             }
         }
 
-        // 数字人动作演示舞台（大尺寸，占约 40% 页面高度）
+        // 动作示范舞台（大尺寸，占约 45% 页面高度）：真视频优先；无匹配视频走诚实卡片。
         item {
             Box(
                 modifier = Modifier
@@ -135,19 +151,60 @@ fun CoachScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // 小形象做"数字教练"身份识别（静止 PNG，非示范主体）
+                        CoachAvatar(ageId = age.id, size = 40.dp)
+                        Spacer(Modifier.width(8.dp))
                         Text(ex.name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
                         Spacer(Modifier.weight(1f))
-                        Text(if (correctionText != null) "纠正示范" else "数字人示范", fontSize = 12.sp, color = color, fontWeight = FontWeight.SemiBold)
+                        val tag = when {
+                            correctionText != null -> "纠正示范"
+                            videoUsable -> "示范视频"
+                            else -> "动作要领"
+                        }
+                        Text(tag, fontSize = 12.sp, color = color, fontWeight = FontWeight.SemiBold)
                     }
-                    // 大尺寸动作演示：数字人帧序列（Pose Sprite）演示该动作，逐帧不同姿态
-                    com.quannian.zhidong.ui.components.CoachSpriteView(
-                        ageId = age.id,
-                        exerciseKey = ex.analysisKind,
-                        figureSizePx = 560,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    )
+
+                    // 主体（P0-2）：匹配动作的真实示范视频（循环播放）；无匹配→诚实卡片。
+                    val usableVideo = if (videoUsable) teachVideo else null
+                    if (usableVideo != null) {
+                        TeachingVideoPlayer(
+                            assetPath = usableVideo.assetPath,
+                            title = "",
+                            subtitle = "${ex.name} · 标准动作示范",
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            loop = true
+                        )
+                    } else {
+                        // 诚实分支：该动作无专属示范视频（深蹲/引体等），展示要领与提示，不塞泛化视频。
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFF18243C), RoundedCornerShape(16.dp))
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                if (teachVideo != null) "该动作示范视频暂时不可用" else "该动作暂无专属示范视频",
+                                fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD9A8)
+                            )
+                            Text(
+                                "下方为该动作的要领与安全提示，跟随文字与跟练页的实时反馈练习。",
+                                fontSize = 12.sp, color = Color(0xFFB9C4DA), lineHeight = 17.sp
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text("动作要领", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            ex.steps.forEachIndexed { i, s ->
+                                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("${i + 1}", fontSize = 12.sp, color = color, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.width(16.dp))
+                                    Text(s, fontSize = 12.sp, color = Color(0xFFDCE4F2), modifier = Modifier.weight(1f),
+                                        lineHeight = 17.sp)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -174,6 +231,19 @@ fun CoachScreen(
                         Text(s, fontSize = 14.sp, color = Palette.ink, modifier = Modifier.weight(1f))
                     }
                     if (i < ex.steps.lastIndex) Spacer(Modifier.height(6.dp))
+                }
+                // 安全提示
+                if (ex.cautions.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("⚠️", fontSize = 14.sp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("注意事项", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink)
+                            ex.cautions.forEach { c ->
+                                Text("· $c", fontSize = 12.sp, color = Palette.inkSoft, lineHeight = 17.sp)
+                            }
+                        }
+                    }
                 }
             }
         }

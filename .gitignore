@@ -46,3 +46,7 @@ app/build/test-cp.txt
 
 # ===== 淇濈暀娓呭崟锛堟樉寮忔斁琛岋紝閬垮厤琚笂闈㈣鍒欒浼わ級=====
 !app/src/main/assets/pose_landmarker.task
+
+# 本地测试 classpath 辅助文件
+cp_*.txt
+

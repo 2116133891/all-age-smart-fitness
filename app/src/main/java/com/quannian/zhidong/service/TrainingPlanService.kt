@@ -108,7 +108,13 @@ object TrainingPlanService {
             val item = order[day % order.size]
             val tpl = TEMPLATES[item] ?: TEMPLATES[DEFAULT_ORDER[day % DEFAULT_ORDER.size]]!!
             val minutes = (tpl.baseMinutes * loadFactor).toInt().coerceAtLeast(10)
-            val videoAsset = TeachingVideoRepository.videoFor(tpl.videoId)?.assetPath ?: ""
+            // P1 修复（2026-10-12）：tpl.videoId 是**视频 id**（BY_ID 键），而 videoFor() 期望
+            // **体测 item key**（ITEM_TO_PRIMARY 键），二者命名空间不同。旧代码用 videoFor(tpl.videoId)
+            // 会把 forward_reach/pullup/endurance 等视频 id 误当 item key 查不到 → 返回 null →
+            // 坐位体前屈 / 引体·仰卧 / 800-1000m 三项的"▶ 播教学视频"按钮静默失效。
+            // 改为按视频 id 直接取 byId()（7 个 tpl.videoId 均为合法 BY_ID 键；方法说明型
+            // bmi_method / vital_capacity_method 的 assetPath 为空 → videoAsset="" 保持设计内）。
+            val videoAsset = TeachingVideoRepository.byId(tpl.videoId)?.assetPath ?: ""
             tasks.add(
                 TrainingPlanTask(
                     planId = planId,

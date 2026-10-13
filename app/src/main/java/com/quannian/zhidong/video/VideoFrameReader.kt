@@ -66,14 +66,17 @@ class VideoFrameReader(private val context: Context) {
      * 抽取并分析：按 [fps] 抽帧 → 每帧 MediaPipe 出 33 点 → [VideoFrame] 序列。
      *
      * @param detector 已 init 的 [PoseDetector]（VIDEO 模式，时间戳自动单调）。
-     * @param onProgress 进度回调（已处理帧数 / 总帧数），供 UI 进度条。
+     * @param isCancelled 取消判定（用户点"取消分析"后置 true）；命中即在下一帧前停止，
+     *                    返回已处理到的帧供 UI 显示"已停/重选"，并让调用方 finally 释放检测器。
+     * @param onProgress 进度回调（已处理帧数 / 总帧数 / 已识别人体帧数），供 UI 实时进度条与"覆盖率"。
      * @return 抽帧得到的关键点序列（时间升序），可直接喂 [VideoAnalysisEngine.analyze]。
      */
     fun extractFrames(
         uri: Uri,
         detector: PoseDetector,
         fps: Int = DEFAULT_FPS,
-        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+        isCancelled: () -> Boolean = { false },
+        onProgress: (done: Int, total: Int, personFrames: Int) -> Unit = { _, _, _ -> }
     ): List<VideoFrame> {
         val mmr = MediaMetadataRetriever()
         try {
@@ -86,7 +89,13 @@ class VideoFrameReader(private val context: Context) {
             val total = (effDurMs / interval).toInt() + 1
 
             val frames = ArrayList<VideoFrame>(total)
+            var personFrames = 0
             for (i in 0 until total) {
+                // 用户取消：下一帧前停止，返回已处理帧，让调用方 finally 释放检测器。
+                if (isCancelled()) {
+                    onProgress(i + 1, total, personFrames)
+                    break
+                }
                 val tMs = (i * interval).coerceAtMost(effDurMs)
                 // MediaPipe VIDEO 要求严格单调递增时间戳：用递增帧序号（ms 语义），
                 // 而非真实 tMs（抽帧间隔固定，帧序号即等距，严格单调且 > lastTs）。
@@ -100,9 +109,11 @@ class VideoFrameReader(private val context: Context) {
                         emptyList()
                     }
                     if (!bitmap.isRecycled) bitmap.recycle()
+                    // 该帧识别人体才计入"覆盖率"（personFrames），无人帧 landmarks 为空。
+                    if (landmarks.isNotEmpty()) personFrames++
                     frames += VideoFrame(i, tMs, landmarks)
                 }
-                onProgress(i + 1, total)
+                onProgress(i + 1, total, personFrames)
             }
             return frames
         } catch (e: Exception) {

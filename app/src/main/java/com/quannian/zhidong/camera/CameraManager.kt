@@ -183,7 +183,17 @@ class CameraManager(
 
     /** 把一帧 [ImageProxy] 转成缩放后的 Bitmap，做姿态推理并回调。 */
     private fun analyzeFrame(image: ImageProxy) {
-        val bitmap = try {
+        // 任务 17/10（旋转诊断）：toBitmap() 返回的是**传感器方向**的帧。
+        // 横置传感器 + 竖拿手机时，画面会横躺 90°/270°；若不旋转，MediaPipe 拿到
+        // "横躺"的人体，检测的左右肩/髋会被互换或整体旋错 → 骨架与真人错位、
+        // 深度角（屈髋/屈膝）失真。CameraX 在 ImageProxy.imageInfo 提供
+        // rotationDegrees（0/90/180/270），必须应用到分析帧，得到 upright 帧再推理。
+        val rotation = try {
+            image.imageInfo.rotationDegrees
+        } catch (_: Exception) {
+            0
+        }
+        val rawBitmap = try {
             image.toBitmap()
         } catch (e: Exception) {
             Log.e(tag, "toBitmap 失败", e)
@@ -191,19 +201,34 @@ class CameraManager(
         } finally {
             image.close()
         }
-        if (bitmap == null) {
+        if (rawBitmap == null) {
             onFrame(emptyList())
             return
         }
-        val resized = scaleDown(bitmap, 720)
+        // 旋转到 upright（portrait）；rotation==0 时原样，避免无谓拷贝。
+        val upright = if (rotation == 0) rawBitmap
+        else {
+            val m = android.graphics.Matrix()
+            m.postRotate(rotation.toFloat())
+            val r = android.graphics.Bitmap.createBitmap(
+                rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, m, false
+            )
+            if (r !== rawBitmap) rawBitmap.recycle()
+            r
+        }
+        val resized = scaleDown(upright, 720)
         // 前置摄像头画面是镜像的（用户在屏幕里看到自己像照镜子），
         // 关键点需在镜像后的坐标系里检测，骨架才能与画面严格重合；
         // 检测坐标与预览镜像后的画面坐标一致，SkeletonOverlay 不需再翻转。
         val analysis = if (!facingBack) poseDetector.mirrorHorizontal(resized) else resized
         val landmarks = poseDetector.detect(analysis).toLandmarks()
+        // 回收链（从最派生端往最基础端，避免 double-recycle）：
+        //   analysis (mirror copy) → resized (scaled copy) → upright (rotated / original)
         if (analysis !== resized) analysis.recycle()
-        if (resized !== bitmap) resized.recycle()
-        bitmap.recycle()
+        if (resized !== upright) resized.recycle()
+        // upright 永远是"最终基底"：rotation==0 时它 == rawBitmap；
+        // rotation!=0 时 rawBitmap 已在 rotation 分支被回收，upright 是旋转副本。
+        upright.recycle()
         onFrame(landmarks)
     }
 

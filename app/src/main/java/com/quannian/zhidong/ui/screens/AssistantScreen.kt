@@ -46,12 +46,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quannian.zhidong.assistant.LocalAssistant
+import com.quannian.zhidong.coach.AiFacade
 import com.quannian.zhidong.db.TrainingRepository
 import com.quannian.zhidong.model.ProfileStore
 import com.quannian.zhidong.ui.theme.Palette
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/** 一条对话。 */
-data class ChatMsg(val text: String, val fromUser: Boolean)
+/** 一条对话（[source] 标记来自 远程 AI / 本地规则，避免把 降级 回答 冒充 远程 AI）。 */
+data class ChatMsg(val text: String, val fromUser: Boolean, val source: String = "")
 
 /**
  * AI 小助手（本地离线问答）：输入框 + 快捷提问 + 气泡对话，回复引用用户画像与最近训练。
@@ -71,14 +74,27 @@ fun AssistantScreen(
     var recent: List<com.quannian.zhidong.db.TrainingSession> by remember { mutableStateOf(emptyList()) }
     val quick = remember(profile.ageId) { LocalAssistant.quickQuestions(profile.ageId) }
 
-    // 预置最近训练数据（给助手个性化用）
+    // 预置最近训练数据（给助手个性化用）+ 读取 AI 服务配置
+    var hasBodyTest by remember { mutableStateOf(false) }
+    var aiKey by remember { mutableStateOf(com.quannian.zhidong.coach.ApiKeyStore.loadKey(context)) }
+    var aiCfg by remember { mutableStateOf(com.quannian.zhidong.coach.ApiKeyStore.loadConfig(context)) }
+    var aiConsent by remember {
+        mutableStateOf(context.getSharedPreferences("quanli_settings", android.content.Context.MODE_PRIVATE)
+            .getBoolean("ai_data_consent", false))
+    }
+    val remoteReady = aiKey.isNotBlank() && aiCfg.second.isNotBlank()
+
     LaunchedEffect(Unit) {
         try {
             recent = TrainingRepository(context).recent(5)
         } catch (_: Exception) {
             recent = emptyList()
         }
-        messages.add(ChatMsg("你好，我是全龄智动 AI 教练助手，${ProfileStore.ageLabel(profile.ageId)}专属。", fromUser = false))
+        hasBodyTest = runCatching {
+            com.quannian.zhidong.db.BodyTestRepository(context).allResults().isNotEmpty()
+        }.getOrDefault(false)
+        messages.add(ChatMsg("你好，我是全龄智动 AI 教练助手，${ProfileStore.ageLabel(profile.ageId)}专属。" +
+            if (remoteReady) " 已连接 AI 模型服务。" else " （离线本地规则，可去 设置→AI 模型服务 配置模型）", fromUser = false))
     }
 
     val sendScope = rememberCoroutineScope()
@@ -89,12 +105,31 @@ fun AssistantScreen(
         messages.add(ChatMsg(question, fromUser = true))
         sending = true
         input = ""
-        // 本地引擎即时返回；用一个小延迟模拟"思考"，体验更像 AI
-        sendScope.launch {
-            kotlinx.coroutines.delay(400)
-            val reply = LocalAssistant.ask(question, profile, recent)
-            messages.add(ChatMsg(reply.text, fromUser = false))
-            sending = false
+        if (remoteReady) {
+            // 远程：真实调模型（IO 线程），失败自动降级本地（AiFacade 内部保证）
+            sendScope.launch {
+                val answer = withContext(Dispatchers.IO) {
+                    AiFacade.ask(
+                        question = question,
+                        profile = profile,
+                        recentSessions = recent,
+                        hasBodyTest = hasBodyTest,
+                        allowPersonalData = aiConsent,
+                        endpoint = aiCfg.second,
+                        model = aiCfg.third,
+                        apiKey = aiKey
+                    )
+                }
+                messages.add(ChatMsg(answer.text, fromUser = false, source = answer.source.label))
+                sending = false
+            }
+        } else {
+            // 本地：即时规则回答（诚实标注 本地）
+            sendScope.launch {
+                val reply = LocalAssistant.ask(question, profile, recent)
+                messages.add(ChatMsg(reply.text, fromUser = false, source = "本地规则"))
+                sending = false
+            }
         }
     }
 
@@ -119,10 +154,15 @@ fun AssistantScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(Palette.accentSoft)
+                        .background(if (remoteReady) Palette.good.copy(alpha = 0.15f) else Palette.accentSoft)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text("本地离线", fontSize = 11.sp, color = Palette.accent, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (remoteReady) "AI 模型已连接" else "本地离线",
+                        fontSize = 11.sp,
+                        color = if (remoteReady) Palette.good else Palette.accent,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
@@ -212,12 +252,18 @@ private fun Bubble(msg: ChatMsg, accent: Color) {
                 .background(if (msg.fromUser) accent.copy(alpha = 0.16f) else Palette.card)
                 .padding(horizontal = 14.dp, vertical = 11.dp)
         ) {
-            Text(
-                text = msg.text,
-                fontSize = 14.sp,
-                color = if (msg.fromUser) accent else Palette.ink,
-                lineHeight = 21.sp
-            )
+            Column {
+                Text(
+                    text = msg.text,
+                    fontSize = 14.sp,
+                    color = if (msg.fromUser) accent else Palette.ink,
+                    lineHeight = 21.sp
+                )
+                if (!msg.fromUser && msg.source.isNotBlank()) {
+                    Text(msg.source, fontSize = 10.sp, color = Palette.inkSoft.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(top = 4.dp))
+                }
+            }
         }
     }
 }

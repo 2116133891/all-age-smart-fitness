@@ -38,7 +38,7 @@ import com.quannian.zhidong.ui.theme.Palette
 // ============================================================================
 //
 //  Phase 1（本参赛版）：三个年龄段使用**用户提供的高质量 3D 数字教练 PNG**
-//  （coach_child / coach_youth / coach_senior，480x960 透明背景）作为主视觉，
+//  （coach_youth / coach_middle / coach_senior，1248×832 横版 · 浅灰底）作为主视觉，
 //  取代旧的 Canvas 火柴人 / 骨骼人。
 //
 //  本对象是 ageId -> 资源 的**唯一**映射点；其它 Screen / 组件不要各自写
@@ -76,8 +76,8 @@ object CoachVisual {
      *
      *  要求（验收 P0-1 / P0-2）：
      *   - 人物静止站立，**无上下跳动 / 无大幅缩放 / 无闪烁**（不创建任何循环动画）。
-     *   - 竖向容器（宽 = 高 * 0.7）+ [ContentScale.Fit]：480x960 竖图全身可见，
-     *     头脚不被裁切；透明背景落在浅色圆角容器上，不出现黑块。
+     *   - 横版容器（宽 = 高 * 1.5，匹配教练 PNG 1248×832 横版）+ [ContentScale.Fit]：全身可见、
+     *     头脚不被裁切；浅灰底落在同色圆角容器上，不出现黑块/异常拉伸。
      *
      * @param size 头像**高度**（Dp）。宽度按 0.7:1 自动取，保证竖图全身可见。
      */
@@ -88,7 +88,9 @@ object CoachVisual {
         size: Dp = 120.dp
     ) {
         val soft = Palette.ageSoft(ageId)
-        val width = size * 0.7f
+        // 教练 PNG 实际为横版 1248×832（≈1.5:1，全身站立 + 浅灰底）。
+        // 容器按横版 1.5:1 生成（size 语义 = 高），避免竖版 0.7:1 造成上下大留白/裁切。
+        val width = size * 1.5f
         val shape = RoundedCornerShape(size * 0.18f)
         Box(
             modifier = modifier

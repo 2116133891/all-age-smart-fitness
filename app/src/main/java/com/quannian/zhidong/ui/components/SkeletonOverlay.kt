@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.quannian.zhidong.analyzer.PoseIndex
 import com.quannian.zhidong.model.Landmark
+import com.quannian.zhidong.pose.Crop
+import com.quannian.zhidong.pose.PoseCoordinateMapper
 
 /** 33 点的人体骨架连线（左右各 5 条 + 躯干 2 条），用于在摄像头上画骨骼。 */
 private val BONES: List<IntArray> = listOf(
@@ -59,18 +61,16 @@ fun SkeletonOverlay(
     mirror: Boolean = false
 ) {
     val byIndex = rememberByIndex(landmarks)
-    val c = crop ?: RectF(0f, 0f, 1f, 1f)
+    // 任务 10：统一走 PoseCoordinateMapper（纯逻辑、已单测），RectF 桥接到纯 Crop。
+    val c = crop?.let { Crop(it.left, it.top, it.right, it.bottom) } ?: Crop.FULL
     Canvas(modifier = modifier.fillMaxSize()) {
         if (byIndex.isEmpty()) return@Canvas
         val w = size.width
         val h = size.height
         fun toPoint(lm: Landmark): Offset {
-            // 1) 源帧归一化 → 画布像素（含裁切）
-            var px = (c.left + lm.x * c.width()) * w
-            val py = (c.top + lm.y * c.height()) * h
-            // 2) 前置镜像
-            if (mirror) px = w - px
-            return Offset(px, py)
+            // 源帧归一化点 → 画布像素（含 可见裁切 + 前置 镜像），单一可信来源。
+            val p = PoseCoordinateMapper.toCanvasPoint(lm, c, w, h, mirror)
+            return Offset(p.x, p.y)
         }
         // 连线
         BONES.forEach { (a, b) ->
