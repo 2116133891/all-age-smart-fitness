@@ -36,4 +36,10 @@ echo "== 运行 纯 JVM 单测（含 V2LogicTest）=="
   com.quannian.zhidong.VideoAnalysisEngineTest \
   com.quannian.zhidong.CoachMotionEngineTest \
   com.quannian.zhidong.V2LogicTest \
-  com.quannian.zhidong.PoseAndVideoV3Test
+  com.quannian.zhidong.PoseAndVideoV3Test 
+  com.quannian.zhidong.OneEuroFilterTest 
+  com.quannian.zhidong.TeachingVideoMatchTest 
+  com.quannian.zhidong.TrainingPlanGenerateTest 
+  com.quannian.zhidong.AiServiceSettingsTest 
+  com.quannian.zhidong.VideoAnalysisHonestTest 
+  com.quannian.zhidong.V33FollowAndBodyTestTest

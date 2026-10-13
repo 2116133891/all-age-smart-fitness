@@ -71,7 +71,8 @@ fun TeachingVideoPlayer(
     modifier: Modifier = Modifier,
     subtitle: String = "",
     onFullScreen: (() -> Unit)? = null,
-    loop: Boolean = false
+    loop: Boolean = false,
+    muted: Boolean = false
 ) {
     val context = LocalContext.current
 

@@ -66,7 +66,8 @@ import kotlinx.coroutines.launch
 fun YouthTrainingPlanScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
-    onPlayVideo: (assetPath: String, title: String, subtitle: String) -> Unit
+    onPlayVideo: (assetPath: String, title: String, subtitle: String) -> Unit,
+    onFollow: (itemKey: String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val repo = remember { BodyTestRepository(context) }
@@ -273,7 +274,8 @@ fun YouthTrainingPlanScreen(
                                 tasks = repo.planTasks(planId!!)
                             }
                         },
-                        onPlayVideo = { asset, title, sub -> onPlayVideo(asset, title, sub) }
+                        onPlayVideo = { asset, title, sub -> onPlayVideo(asset, title, sub) },
+                        onFollow = { onFollow(t.itemKey) }
                     )
                 }
             }
@@ -320,11 +322,13 @@ private fun TaskRow(
     task: TrainingPlanTask,
     onToggle: () -> Unit,
     onSkip: () -> Unit,
-    onPlayVideo: (String, String, String) -> Unit
+    onPlayVideo: (String, String, String) -> Unit,
+    onFollow: (String) -> Unit = {}
 ) {
     val done = task.status == "done"
     val skipped = task.status == "skipped"
     val hasVideo = task.videoAsset.isNotBlank()
+    val followable = !com.quannian.zhidong.repository.TeachingVideoRepository.isMethodOnlyItem(task.itemKey)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,6 +368,12 @@ private fun TaskRow(
             } else {
                 // method-only（BMI/肺活量）：显示测量方法指引，不放视频
                 Pill("📋 测量方法", Palette.inkSoft)
+            }
+            // 跟练入口（仅运动型项；method-only 项无动作可跟）
+            if (followable) {
+                Box(modifier = Modifier.clickable { onFollow(task.itemKey) }) {
+                    Pill("🎯 开始跟练", Palette.good)
+                }
             }
             if (skipped) Pill("已跳过", Palette.inkSoft)
             Spacer(Modifier.weight(1f))

@@ -1,0 +1,342 @@
+package com.quannian.zhidong.ui.screens
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.RectF
+import android.view.ViewGroup
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
+import com.quannian.zhidong.camera.CameraManager
+import com.quannian.zhidong.db.BodyTestRepository
+import com.quannian.zhidong.db.BodyTestResult
+import com.quannian.zhidong.db.BodyTestStandardService
+import com.quannian.zhidong.model.BodyTestCatalog
+import com.quannian.zhidong.model.BodyTestVideo
+import com.quannian.zhidong.model.Landmark
+import com.quannian.zhidong.model.ProfileStore
+import com.quannian.zhidong.pose.PoseDetector
+import com.quannian.zhidong.repository.TeachingVideoRepository
+import com.quannian.zhidong.ui.components.Card
+import com.quannian.zhidong.ui.components.Pill
+import com.quannian.zhidong.ui.theme.Palette
+import kotlinx.coroutines.launch
+
+/**
+ * V3.3 青年体测「单项跟练/测评」双栏页（spec §3.2 / §2）：
+ *
+ *  从体测项目卡 / 教学视频页 / 备考计划任务 进入，带 itemKey。
+ *  - 左侧：该项的真实示范视频（[TeachingVideoRepository.videoForItem] 严格映射；BMI/肺活量无视频走诚实空态）。
+ *  - 右侧：实时摄像头 + MediaPipe 骨架（辅助识别，不承诺自动测距/计数）。
+ *  - 底部：该项目成绩人工录入 + 保存（source="manual"），诚实分级；BMI 双值算 BMI。
+ *
+ *  双栏复用 [TeachPane] / [CameraPane]（与 [FollowAlongScreen] 同一套组件与严格视频映射），
+ *  不另造冲突跟练页；相机用独立 [CameraManager] 实例，避免跨页共享状态。
+ */
+@Composable
+fun FollowAlongItemScreen(
+    itemKey: String,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val profile = remember { ProfileStore.load(context) }
+    val gender = profile.gender
+    val item = remember(itemKey) { BodyTestCatalog.byKey(itemKey) }
+    val repo = remember { BodyTestRepository(context) }
+    val scope = rememberCoroutineScope()
+
+    val teachVideo = remember(itemKey, gender) { TeachingVideoRepository.videoForItem(itemKey, gender) }
+    val videoUsable = teachVideo != null && teachVideo.assetPath.isNotBlank()
+    val displayName = item?.let { BodyTestCatalog.displayName(it, gender) } ?: itemKey
+
+    // 相机（独立实例；onFrame 仅写回 landmarks 供骨架展示，不接分析器、不做自动计数）
+    val landmarkBox = remember { java.util.concurrent.atomic.AtomicReference<List<Landmark>>(emptyList()) }
+    val readyBox = remember { java.util.concurrent.atomic.AtomicReference<Boolean>(false) }
+    val cameraManager = remember {
+        CameraManager(
+            context = context,
+            owner = context as androidx.lifecycle.LifecycleOwner,
+            poseDetector = PoseDetector(context.applicationContext),
+            onFrame = { lm -> landmarkBox.set(lm) },
+            onPoseReady = { ready -> readyBox.set(ready) }
+        )
+    }
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> hasPermission = granted }
+    var facingBack by remember { mutableStateOf(true) }
+
+    DisposableEffect(Unit) {
+        onDispose { cameraManager.release() }
+    }
+
+    // 录入状态
+    var input by remember { mutableStateOf("") }
+    var input2 by remember { mutableStateOf("") }
+    var saved by remember { mutableStateOf(false) }
+    var latest by remember { mutableStateOf<BodyTestResult?>(null) }
+    LaunchedEffect(itemKey) { latest = repo.latestResult(itemKey) }
+
+    val isHeightWeight = item?.inputType == BodyTestCatalog.InputType.HEIGHT_WEIGHT
+    val value = input.toDoubleOrNull()
+    val value2 = input2.toDoubleOrNull()
+    val canSave = if (isHeightWeight) value != null && value2 != null && (value ?: 0.0) > 0 else value != null
+
+    var pageWidthDp by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Palette.bg)
+            .onGloballyPositioned { coords ->
+                val wDp = coords.size.width / density.density
+                if (wDp != 0f) pageWidthDp = wDp
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            IconButton(onClick = { cameraManager.release(); onBack() }) {
+                Icon(Icons.Filled.ArrowBack, "返回", tint = Palette.ink)
+            }
+            Column(Modifier.weight(1f)) {
+                Text("跟练 · $displayName", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                Text(TeachingVideoRepository.followCapabilityLabel(itemKey), fontSize = 11.sp, color = Palette.inkSoft)
+            }
+            if (item?.genderSplit == true) Pill(displayName, Palette.accent)
+            Box(
+                modifier = Modifier
+                    .size(38.dp).clip(RoundedCornerShape(12.dp))
+                    .background(Palette.cardSoft)
+                    .clickable { cameraManager.switchCamera(); facingBack = !facingBack },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("↻", fontSize = 16.sp, color = Palette.ink, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        val sideBySide = pageWidthDp > 700f
+        if (sideBySide) {
+            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TeachPane(
+                    exId = itemKey, exName = displayName, exSteps = keyPointsOf(teachVideo),
+                    teachVideo = teachVideo, videoUsable = videoUsable,
+                    ageColor = Palette.accent, modifier = Modifier.weight(0.46f)
+                )
+                ItemCameraPane(
+                    cameraManager = cameraManager,
+                    facingBack = facingBack,
+                    hasPermission = hasPermission,
+                    onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
+                    landmarkBox = landmarkBox, readyBox = readyBox,
+                    modifier = Modifier.weight(0.54f)
+                )
+            }
+        } else {
+            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TeachPane(
+                    exId = itemKey, exName = displayName, exSteps = keyPointsOf(teachVideo),
+                    teachVideo = teachVideo, videoUsable = videoUsable,
+                    ageColor = Palette.accent, modifier = Modifier.fillMaxWidth().weight(0.4f)
+                )
+                ItemCameraPane(
+                    cameraManager = cameraManager,
+                    facingBack = facingBack,
+                    hasPermission = hasPermission,
+                    onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
+                    landmarkBox = landmarkBox, readyBox = readyBox,
+                    modifier = Modifier.fillMaxWidth().weight(0.6f)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Card() {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    if (isHeightWeight) "录入身高 / 体重（计算 BMI）" else "录入实测成绩（${item?.unit ?: ""}）",
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Palette.ink
+                )
+                Spacer(Modifier.weight(1f))
+                Pill("人工录入", Palette.warn)
+            }
+            Spacer(Modifier.height(8.dp))
+            if (isHeightWeight) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = input, onValueChange = { input = it },
+                        label = { Text("身高 (cm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = input2, onValueChange = { input2 = it },
+                        label = { Text("体重 (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                val bmi = if (canSave) value2!! / ((value!! / 100.0) * (value!! / 100.0)) else null
+                if (bmi != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text("BMI = ${"%.1f".format(bmi)} kg/m²（= 体重kg ÷ 身高m²，非体脂率）",
+                        fontSize = 13.sp, color = Palette.accent, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                OutlinedTextField(
+                    value = input, onValueChange = { input = it },
+                    label = { Text("实测值（${item?.unit ?: ""}）· 人工录入") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (canSave) Palette.accent else Palette.line)
+                    .clickable(enabled = canSave && !saved) {
+                        val raw = if (isHeightWeight) value2!! / ((value!! / 100.0) * (value!! / 100.0)) else value!!
+                        scope.launch {
+                            val applicable = BodyTestStandardService.applicable(gender)
+                            val (score, scoreValid) =
+                                if (applicable) BodyTestStandardService.scoreFor(itemKey, gender, raw) else 0 to false
+                            repo.saveResult(BodyTestResult(
+                                itemKey = itemKey, ageGroup = "youth", gender = gender,
+                                testDate = System.currentTimeMillis(),
+                                rawValue = raw,
+                                rawValue2 = if (isHeightWeight) (value2 ?: 0.0) else 0.0,
+                                heightCm = if (isHeightWeight) (value ?: 0.0) else 0.0,
+                                weightKg = if (isHeightWeight) (value2 ?: 0.0) else 0.0,
+                                unit = item?.unit ?: "",
+                                source = "manual",
+                                standardVersion = if (applicable) BodyTestStandardService.STANDARD_VERSION else "",
+                                score = score, scoreValid = scoreValid,
+                                note = if (isHeightWeight) "BMI 人工录入计算" else "人工录入实测值"
+                            ))
+                            latest = repo.latestResult(itemKey)
+                            saved = true
+                        }
+                    }
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(Icons.Filled.Check, null,
+                    tint = if (canSave && !saved) Color.White else Palette.inkSoft, modifier = Modifier.size(18.dp))
+                Text(
+                    if (saved) "已保存本次成绩 ✓" else "保存成绩",
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    color = if (canSave && !saved) Color.White else Palette.inkSoft
+                )
+            }
+            if (latest != null && latest!!.scoreValid) {
+                Spacer(Modifier.height(6.dp))
+                Text("最近官方评分：${latest!!.score} 分（${BodyTestStandardService.gradeLabel(latest!!.score)}）",
+                    fontSize = 12.sp, color = Palette.good, fontWeight = FontWeight.SemiBold)
+            }
+            if (TeachingVideoRepository.isMethodOnlyItem(itemKey)) {
+                Spacer(Modifier.height(6.dp))
+                Text("此项为独立测评录入项（无动作示范视频），不作为动态跟练项目；右侧摄像头仅作站位辅助。",
+                    fontSize = 11.sp, color = Palette.inkSoft, lineHeight = 15.sp)
+            }
+        }
+    }
+}
+
+/** 视频动作要点（无视频给安全要点）。 */
+private fun keyPointsOf(v: BodyTestVideo?): List<String> {
+    if (v == null) return listOf("站好位置，保持身体在画面中央", "完成后在下方录入实测值")
+    return v.keyPoints.ifEmpty { listOf(v.summary) }
+}
+
+/**
+ * 单项页专用相机区：与 [FollowAlongScreen.CameraPane] 布局一致，但额外把
+ * landmarks/poseReady 写回调用方 State（用 AtomicReference 桥接 CameraManager 回调）。
+ */
+@Composable
+private fun ItemCameraPane(
+    cameraManager: CameraManager,
+    facingBack: Boolean,
+    hasPermission: Boolean,
+    onGrant: () -> Unit,
+    landmarkBox: java.util.concurrent.atomic.AtomicReference<List<Landmark>>,
+    readyBox: java.util.concurrent.atomic.AtomicReference<Boolean>,
+    modifier: Modifier
+) {
+    // 把 CameraManager 的回调结果（经 AtomicReference 桥接）反映到本地 Compose State：
+    // 轻量轮询（120ms）更新骨架关键点与识别就绪标志，避免在 CameraManager 构造期捕获不可写局部 var。
+    var lm by remember { mutableStateOf<List<Landmark>>(landmarkBox.get()) }
+    var pr by remember { mutableStateOf<Boolean>(readyBox.get()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (lm !== landmarkBox.get()) lm = landmarkBox.get()
+            if (pr != readyBox.get()) pr = readyBox.get()
+            kotlinx.coroutines.delay(120)
+        }
+    }
+    com.quannian.zhidong.ui.screens.CameraPane(
+        cameraManager = cameraManager,
+        landmarks = lm,
+        facingBack = facingBack,
+        poseReady = pr,
+        hasPermission = hasPermission,
+        onGrant = onGrant,
+        modifier = modifier
+    )
+}

@@ -224,6 +224,52 @@ object TeachingVideoRepository {
     fun teachingVideoFor(exerciseId: String): BodyTestVideo? =
         EXERCISE_TEACHING_VIDEO[exerciseId]?.let { BY_ID[it] }
 
+    // ======================================================================
+    // V3.3：青年体测 项目项 itemKey → 教学/示范视频 的**严格**统一映射（唯一权威来源）。
+    //  红线：BMI/肺活量 是方法型项目（无动作视频），绝不映射到深蹲/跳远等无关动作视频；
+    //       训练详情 / 跟练 / 备考计划 全应用共用这一套映射。
+    // ======================================================================
+
+    /** 是否"仅方法说明、无可播视频"的项目（BMI / 肺活量）。这类项目不进入动态跟练列表。 */
+    fun isMethodOnlyItem(itemKey: String): Boolean =
+        itemKey == BodyTestItemKey.BMI || itemKey == BodyTestItemKey.VITAL_CAPACITY
+
+    /**
+     * 体测项目 itemKey（+ 性别）→ 匹配的教学/示范视频（P0 统一映射）。
+     *  - 运动型项目 → 真实动作视频；BMI / 肺活量 → method-only 条目（assetPath 为空）。
+     *  - 未知 key → null（UI 走诚实空态，不塞泛化视频）。
+     */
+    fun videoForItem(itemKey: String, gender: String = "unknown"): BodyTestVideo? =
+        when (itemKey) {
+            BodyTestItemKey.RUN_50M -> BY_ID["run_50m"]
+            BodyTestItemKey.RUN_800_1000 -> BY_ID["endurance"]
+            BodyTestItemKey.LONG_JUMP -> BY_ID["long_jump"]
+            BodyTestItemKey.SEATED_REACH -> BY_ID["forward_reach"]
+            BodyTestItemKey.PULLUP_SITUP -> if (gender == "female") BY_ID["situp"] else BY_ID["pullup"]
+            BodyTestItemKey.BMI -> BY_ID["bmi_method"]                // method-only（无视频）
+            BodyTestItemKey.VITAL_CAPACITY -> BY_ID["vital_capacity_method"] // method-only（无视频）
+            "warmup" -> BY_ID["warmup"]
+            else -> null
+        }
+
+    /** 该方法型项目是否有可播视频（BMI/肺活量 → false）。 */
+    fun hasItemVideo(itemKey: String, gender: String = "unknown"): Boolean =
+        !videoForItem(itemKey, gender)?.assetPath.isNullOrEmpty()
+
+    /**
+     * 跟练能力标注（诚实分级，不把人工成绩包装成"AI 自动检测"）：
+     *  运动测量项没有专属可靠自动计数/测距算法 → 一律"辅助识别 + 人工"。
+     */
+    fun followCapabilityLabel(itemKey: String): String =
+        when (itemKey) {
+            BodyTestItemKey.RUN_50M -> "辅助识别 · 人工计时"
+            BodyTestItemKey.RUN_800_1000 -> "辅助识别 · 人工计时"
+            BodyTestItemKey.LONG_JUMP -> "辅助识别 · 人工测量距离"
+            BodyTestItemKey.SEATED_REACH -> "辅助识别 · 人工测量"
+            BodyTestItemKey.PULLUP_SITUP -> "辅助识别 · 人工计数"
+            else -> "辅助识别"
+        }
+
     /** itemKey → 主视频 id（有动作示范 的 优先）。 */
     private val ITEM_TO_PRIMARY: Map<String, String> = mapOf(
         BodyTestItemKey.LONG_JUMP to "long_jump",

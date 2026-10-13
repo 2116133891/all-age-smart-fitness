@@ -163,6 +163,15 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     YouthBodyTestScreen(
                         onBack = { nav.popBackStack() },
                         onPickItem = { key -> nav.navigate("youthBodyTestItem/$key") },
+                        onWatchItem = { key ->
+                            val v = com.quannian.zhidong.repository.TeachingVideoRepository.videoForItem(key)
+                            if (v != null && v.assetPath.isNotBlank()) {
+                                nav.navigate("teachingVideoItem/$key")
+                            } else {
+                                nav.navigate("youthBodyTestItem/$key")
+                            }
+                        },
+                        onFollow = { key -> nav.navigate("followItem/$key") },
                         onReport = { nav.navigate("youthBodyTestReport") },
                         onPlan = { nav.navigate("youthTrainingPlan") }
                     )
@@ -172,13 +181,22 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                     YouthBodyTestDetailScreen(
                         itemKey = key,
                         onBack = { nav.popBackStack() },
-                        onTrain = { nav.navigate("youthTrainingPlan") }
+                        onTrain = { nav.navigate("youthTrainingPlan") },
+                        onFollow = { nav.navigate("followItem/$key") }
+                    )
+                }
+                composable("followItem/{key}") { bse ->
+                    val key = bse.arguments?.getString("key") ?: ""
+                    FollowAlongItemScreen(
+                        itemKey = key,
+                        onBack = { nav.popBackStack() }
                     )
                 }
                 composable("youthTrainingPlan") {
                     YouthTrainingPlanScreen(
                         onBack = { nav.popBackStack() },
-                        onPlayVideo = { asset, title, sub -> nav.navigate("teachingVideo/$asset/$title/$sub") }
+                        onPlayVideo = { asset, title, sub -> nav.navigate("teachingVideo/$asset/$title/$sub") },
+                        onFollow = { key -> nav.navigate("followItem/$key") }
                     )
                 }
                 composable("youthBodyTestReport") {
@@ -198,6 +216,28 @@ fun NavigationHost(modifier: Modifier = Modifier) {
                         subtitle = sub,
                         onBack = { nav.popBackStack() }
                     )
+                }
+                composable("teachingVideoItem/{key}") { bse ->
+                    val key = bse.arguments?.getString("key") ?: ""
+                    val v = com.quannian.zhidong.repository.TeachingVideoRepository.videoForItem(key)
+                    if (v != null && v.assetPath.isNotBlank()) {
+                        TeachingVideoScreen(
+                            assetPath = v.assetPath,
+                            title = v.title,
+                            subtitle = v.summary,
+                            itemKey = key,
+                            onBack = { nav.popBackStack() },
+                            onFollowItem = { fk -> nav.navigate("followItem/$fk") }
+                        )
+                    } else {
+                        // 无动作视频（method-only）→ 回详情/测评录入页
+                        TeachingVideoScreen(
+                            assetPath = "",
+                            title = "无示范视频 · $key",
+                            subtitle = "此项为独立测评录入项，暂无动作示范视频",
+                            onBack = { nav.popBackStack() }
+                        )
+                    }
                 }
                 composable("exercise/{id}") { bse ->
                     val id = bse.arguments?.getString("id") ?: ""
