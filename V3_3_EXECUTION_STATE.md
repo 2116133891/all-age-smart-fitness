@@ -89,9 +89,11 @@
 2. 视频生成服务（若有新增视频需求）——本轮未新增视频，未触发。
 
 ## 重试与提交记录（2026-10-13 15:59 本地时间）
-- 真机重连：`adb reconnect offline` + `adb kill-server/start-server` + 二次 `reconnect` + 30s 轮询，设备 `b7a0af21` 仍离线 → 真机安装/验收维持 **BLOCKED_EXTERNAL**（按指示不无限重试、不伪造）。
+- 真机重连：首次 3 轮有限重连（`reconnect offline` + `kill-server/start-server` + 二次 `reconnect` + 30s 轮询）设备仍离线 → 真机安装/验收维持 **BLOCKED_EXTERNAL**。
 - 代码提交：V3.3 全部改动 12 文件（+1201/-288）已 commit `4a1c883`，推送 `git push origin v3-dev` 成功（`aebf31c..4a1c883`）。
-- 产物：`app-debug.apk` 91,480,016 字节（≈87.2 MB），时间戳 2026-10-13 15:50，可待设备重连后 `adb -s b7a0af21 install -r -t` 安装验证。
+- 产物：`app-debug.apk` 91,480,016 字节（≈87.2 MB），时间戳 2026-10-13 15:50。
+- **2026-10-13 16:23 设备重连成功**：`adb -s b7a0af21 install -r -t` → **Success**；`pm list packages` 确认 `com.quannian.zhidong` 已安装。T.8 真机安装子项解除阻塞；旋转/逐页点击/UI 逐屏验证仍为人工验收（BLOCKED_EXTERNAL）。
+- 文档 commit `49930b7`，推送 `4a1c883..49930b7` 成功。
 
 ## 变更文件清单（本轮）
 - `repository/TeachingVideoRepository.kt`（新增 V3.3 严格映射 + 能力标签）
