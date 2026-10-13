@@ -88,6 +88,11 @@
 1. 真机逐页点击 / 旋转双栏显示 / 摄像头权限回收 / 双栏跟练真机验收（设备 `b7a0af21` 需重连）。
 2. 视频生成服务（若有新增视频需求）——本轮未新增视频，未触发。
 
+## 重试与提交记录（2026-10-13 15:59 本地时间）
+- 真机重连：`adb reconnect offline` + `adb kill-server/start-server` + 二次 `reconnect` + 30s 轮询，设备 `b7a0af21` 仍离线 → 真机安装/验收维持 **BLOCKED_EXTERNAL**（按指示不无限重试、不伪造）。
+- 代码提交：V3.3 全部改动 12 文件（+1201/-288）已 commit `4a1c883`，推送 `git push origin v3-dev` 成功（`aebf31c..4a1c883`）。
+- 产物：`app-debug.apk` 91,480,016 字节（≈87.2 MB），时间戳 2026-10-13 15:50，可待设备重连后 `adb -s b7a0af21 install -r -t` 安装验证。
+
 ## 变更文件清单（本轮）
 - `repository/TeachingVideoRepository.kt`（新增 V3.3 严格映射 + 能力标签）
 - `ui/screens/FollowAlongScreen.kt`（双栏重写，移除火柴人）
