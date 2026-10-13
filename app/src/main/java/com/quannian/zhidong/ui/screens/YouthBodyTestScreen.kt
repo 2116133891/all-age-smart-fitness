@@ -76,6 +76,7 @@ fun YouthBodyTestScreen(
     val context = LocalContext.current
     val profile = remember { ProfileStore.load(context) }
     val gender = profile.gender
+    val coachStyleLabel = remember { com.quannian.zhidong.model.CoachStyleStore.load(context).title }
     val scope = rememberCoroutineScope()
     val repo = remember { BodyTestRepository(context) }
     val latest = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>(emptyMap()) }
@@ -110,8 +111,8 @@ fun YouthBodyTestScreen(
                     Icon(Icons.Filled.ArrowBack, "返回", tint = Palette.ink)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("青年 · 体质 测试", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
-                    Text("跟练 / 测试 闭环 + 独立 测评 录入", fontSize = 12.sp, color = Palette.inkSoft)
+                    Text("青少年体测训练", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                    Text("练 · 运动训练 + 测 · 体测评估（$coachStyleLabel）", fontSize = 12.sp, color = Palette.inkSoft)
                 }
                 CoachAvatar(ageId = "youth", size = 44.dp)
             }

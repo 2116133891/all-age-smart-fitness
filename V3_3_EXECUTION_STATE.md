@@ -107,3 +107,32 @@
 - `ui/components/TeachingVideoPlayer.kt`（`muted` 参数，双栏默认静音）
 - `test/java/com/quannian/zhidong/V33FollowAndBodyTestTest.kt`（新增 14 用例）
 - `run_jvm_tests_v2.sh`（补充新增测试类）
+
+
+---
+
+## 第二轮 P0 冲刺（V3.3 · 视觉统一 / 教练风格 / 引导页 / 练测结构 / 跟练双栏）
+> 2026-10-13 17:12 起 · 分支 v3-dev · 在已安装 V3.3 基础上继续
+
+| 项 | 状态 | 证据 |
+|---|------|------|
+| 1 年龄段主名称统一（青少年/中青年/中老年） | **PASS** | `AgeGroupConfig.BANDS.title` 改三主名（业务 id 仍 youth/middle/senior，兼容旧数据）；`AgeGroup` 枚举 title 同步；ProfileScreen 卡片去年龄范围括号；V33NamingStyleTest 断言 |
+| 2 三张引导页重做（竖版版式/居中角色/短文案） | **PASS** | `OnboardingScreen` 重写：统一版式 小标签→竖版数字人→年龄段主标题→短简介→功能短句→进度点+CTA；三页同结构；主名走 AgeGroupConfig |
+| 3 个性化设置加"教练风格"第三区 | **PASS** | `ProfileScreen` 三分区（年龄段/性别/教练风格）；`CoachStyle`+`CoachStyleStore` 本地持久化（重启仍有效）；保存并进入才落盘；选中态描边+勾选 |
+| 4 统一资源映射层 | **PASS** | `CoachAssetRepository.resolveVideo(ageGroup,style,videoId)` 纯函数：缺视频返回诚实空态、不跨年龄段填空、风格切换不改动作 id |
+| 5 青少年"练/测"结构 | **PASS** | `YouthBodyTestScreen` 标题"青少年体测训练"+ 练·运动训练 / 测·体测评估（当前风格标签）；BMI/肺活量仍在独立测评录入区，不进动态跟练 |
+| 6 跟练双栏（视频左+摄像头右，去火柴人） | **PASS（沿用一轮）** | FollowAlongScreen/FollowAlongItemScreen 双栏已实现；本轮回查无 screen 残留火柴人引用 |
+| 测试 | **PASS** | 新增 `V33NamingStyleTest`（8 用例）；JUnitCore 全量 **OK (117 tests)** |
+| 构建 | **PASS** | compileDebugKotlin / compileDebugUnitTestKotlin / assembleDebug(--rerun-tasks) **BUILD SUCCESSFUL**；APK 90,664,890 字节（≈86.5MB）2026-10-13 18:15 |
+| 真机安装 | **PASS（仅安装）** | 设备 b7a0af21 在线，`adb install -r -t` → Success；逐页点按/旋转/摄像头人工验收仍建议人工确认 |
+| 竖版角色 PNG / 全套图标重绘 | **BLOCKED_EXTERNAL** | Agnes AIGC 图像生成 503（no available server）→ 无法生成新素材；已用现有 coach_* + 代码版式先行，详见 V3_3_ASSET_MANIFEST.md |
+
+### 新增/修改文件（本轮）
+- 改：`model/Profile.kt`（BANDS title 统一）、`model/PoseModels.kt`（AgeGroup title 统一）
+- 改：`ui/screens/OnboardingScreen.kt`（引导页重写）、`ui/screens/ProfileScreen.kt`（+教练风格区）
+- 改：`ui/screens/YouthBodyTestScreen.kt`（青少年练/测标题 + 风格标签）
+- 新：`model/CoachStyle.kt`（CoachStyle + CoachStyleStore + CoachPreference）
+- 新：`repository/CoachAssetRepository.kt`（统一资源映射层，纯函数可测）
+- 新：`test/V33NamingStyleTest.kt`（8 用例）
+- 新：`V3_3_ASSET_MANIFEST.md`（资源/风格/阻塞清单）
+- 改：`run_jvm_tests_v2.sh`（补 V33NamingStyleTest 类）
