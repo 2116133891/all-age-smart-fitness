@@ -9,7 +9,7 @@
 - **P0-4 个性化 + AI 服务设置**：信息分层、真实 HTTP 连接测试、端点归一化、Key 加密存储 + 脱敏。
 - **P1 回归**：4 底部导航 / finishReport / byId / PoseCoordinateMapper / ApiKeyStore / Room 均无回归。
 - **验证**：`compileDebugKotlin` 绿；`compileDebugUnitTestKotlin` 绿；JVM 全量 **98 项绿**（80 基线 + 18 新增）；Debug APK **86.38MB**，资源入包校验通过。
-- **真机**：设备 b7a0af21 当前离线（`adb no devices`）→ **BLOCKED_EXTERNAL**，安装/逐页点击为人工项（此前小米 MI9/Android9 已验证无崩溃；MIUI rapid_charge 遮挡 uiautomator，本就需人工）。
+- **真机**：设备 b7a0af21 曾离线 → 重连后已安装成功并启动无崩溃（2026-10-13）；逐页点击仍为人工项（MIUI rapid_charge 遮挡 uiautomator）。
 
 ---
 
@@ -94,11 +94,17 @@
 - 路径：`C:\Users\23163\Desktop\城市大赛项目\app\build\outputs\apk\debug\app-debug.apk`
 - 体积：**86.38 MB**（2026-10-13 13:31 构建）。
 
-## 真机状态（BLOCKED_EXTERNAL）
+## 真机状态（已安装 ✅，逐页点击仍为人工项）
 - 目标设备：Xiaomi MI 9 / Android 9（adb serial `b7a0af21`）。
-- 本回合 `adb devices` 无设备（设备离线/未连接）→ 安装与逐页点击**无法程序化执行**，标记为人工项。
-- 已知限制：MIUI rapid_charge 充电浮层遮挡 uiautomator 页面 dump，逐页点击本就需人工。
-- 回归风险低：4 底部导航（首页/训练/AI助手/我的）与 `NavigationHost` 未改；`finishReport`/`byId`/`PoseCoordinateMapper`/`ApiKeyStore`/Room 均未改动；JVM 全绿。设备上线后：安装 → 首页/训练/AI助手/我的 → 教学页看真视频 → 视频分析页看真实进度 → 备考计划看可点选与生成 → 设置页测试连接。
+- 设备曾离线（`adb no devices` / `offline`）→ 经 `adb restart-server` + `adb reconnect offline` 触发重握手后转在线。
+- 安装：`adb -s b7a0af21 install -r -t app-debug.apk` → **Success**（流式安装首次 Broken pipe(32)，非流式重试成功）。
+- 启动核验：`am start -n com.quannian.zhidong/.MainActivity` → `ps` 确认进程存活（PID 6570）；logcat 60s 内无 `AndroidRuntime` FATAL / quannian 崩溃记录 → **无崩溃**。
+- 已知限制（不变）：MIUI rapid_charge 充电浮层遮挡 uiautomator 页面 dump，逐页点击需人工：首页/训练/AI助手/我的 → 教学页看真视频 → 视频分析页看真实进度 → 备考计划看可点选与生成 → 设置页测试连接。
+- 回归风险低：4 底部导航与 `NavigationHost` 未改；`finishReport`/`byId`/`PoseCoordinateMapper`/`ApiKeyStore`/Room 均未改动；JVM 全绿。
+
+## GitHub 推送（✅）
+- remote 已预配置：`origin → https://github.com/2116133891/all-age-smart-fitness.git`；分支 `v3-dev` 推送成功（45 files changed, +2850/−255），GitHub 提示可建 PR：`/pull/new/v3-dev`。
+- .gitignore 已补 `cp_p01.txt`；APK 与 build 产物排除在外，未入仓库。
 
 ## 遗留阻塞 / 后续
 - 真机逐页点击验收（设备在线后）——人工。

@@ -48,12 +48,24 @@
 - [ ] V3_2_FINAL_REPORT.md（修改文件/根因/修复/测试/APK路径/真机状态/遗留阻塞）
 
 ## 当前动作
-✅ V3.2 全部可执行项完成。仅剩真机逐页点击（设备离线 BLOCKED_EXTERNAL，人工项）。
+✅ V3.2 全部可执行项完成。真机安装已于 2026-10-13 13:45 完成（见下）；GitHub 推送完成。
+
+## 真机安装（2026-10-13，设备重连后）
+- 设备 b7a0af21（Xiaomi MI9 / Android 9）：adb restart-server 后出现 `offline`，`adb reconnect offline` 触发重握手，约 50s 后转为 `device` 在线。
+- 流式安装首次报 `Broken pipe (32)`（MIUI 侧偶发），重试 `adb -s b7a0af21 install -r -t` **Success**。
+- `am start -n com.quannian.zhidong/.MainActivity` 启动成功；`ps | grep quannian` 确认进程存活（PID 6570，4599028kB RSS）；logcat 60s 内无 AndroidRuntime FATAL / quannian 崩溃记录。
+- 遗留人工项不变：MIUI rapid_charge 充电浮层遮挡 uiautomator，逐页点击仍需人工。
+
+## GitHub 推送（2026-10-13）
+- remote 已预配置：`origin → https://github.com/2116133891/all-age-smart-fitness.git`（用户 2116133891，凭据由本机 credential helper 提供，推送成功）。
+- 分支 `v3-dev`：commit "V3.2 urgent fix sprint..."（45 files changed, +2850/−255，含 P0-1~P0-4 全部源码/测试/9 个新教学视频 + 报告），`git push origin v3-dev` **成功**（GitHub 提示可建 PR：/pull/new/v3-dev）。
+- .gitignore 已补 `cp_p01.txt`（本地 JVM classpath 临时文件）；APK/build 产物已排除，未入仓库。
 
 ## 最终验证
 - :app:compileDebugKotlin / :app:compileDebugUnitTestKotlin 均 BUILD SUCCESSFUL。
 - JVM 全量 11 类 **98 项 0 失败**（80 基线 + 18 新增：VideoAnalysisHonest 3 / TeachingVideoMatch 4 / TrainingPlanGenerate 6 / AiServiceSettings 5）。
 - Debug APK **86.38MB**（2026-10-13 13:31）：16 教学视频 + pose_landmarker.task(5.51MB) + 3 教练 PNG 全部入包。
-- 真机：设备 b7a0af21 离线（adb no devices）→ BLOCKED_EXTERNAL，安装/逐页点击为人工项（MIUI rapid_charge 遮挡 uiautomator）。
+- 真机：设备 b7a0af21 曾离线（BLOCKED_EXTERNAL）→ 2026-10-13 重连后安装成功（install -r -t Success；am start 启动存活 PID 6570；logcat 无崩溃）。遗留人工项：MIUI rapid_charge 浮层遮挡 uiautomator，逐页点击仍需人工。
+- GitHub：`v3-dev` 已推送 origin（2116133891/all-age-smart-fitness），45 files +2850/−255。
 - 回归：4 底部导航 / NavigationHost / finishReport / TrainingPlanService.byId / PoseCoordinateMapper / ApiKeyStore / Room 均未改动，无回归。
 - 交付报告：V3_2_FINAL_REPORT.md。
