@@ -187,8 +187,9 @@ private fun BoardPageView(page: BoardPage) {
         )
         Spacer(Modifier.height(12.dp))
 
-        // 2~3 条短功能说明（每条 ≤12 字）
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(0f)) {
+        // 2~3 条短功能说明（每条 ≤12 字）。
+        // 注意：Compose 的 weight 必须 > 0；此处用自然高度（wrap content），不占剩余权重。
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             page.points.forEach { p ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
