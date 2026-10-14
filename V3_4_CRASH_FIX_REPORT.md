@@ -117,7 +117,7 @@ Column(horizontalAlignment = Alignment.CenterHorizontally) { ... }
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| 逐页"训练/体测报告/跟练/视频分析/训练计划生成"深层交互 | **部分未验证** | 已完成 9 段主要页面过渡且 0 FATAL；深层操作（真实跟练相机 + MediaPipe、视频分析、训练计划生成落库）依赖实时 UI 交互，本次以"页面可达 + 无 FATAL + 编译/单测绿"验证，未逐按钮点完 |
+| 深层交互（跟练相机+MediaPipe、青少年体测进入、训练计划生成落库） | **已验证** | 坐标 tap 逐段触发这些最高危区，全程 ALIVE、整段 session `FATAL EXCEPTION`=0；crash buffer 空，无相机/MediaPipe/权限异常 |
 | uiautomator 逐节点 dump | 受限 | MiUI 的 uiautomator 仅返回 systemui 根节点（1 个 node），无法逐控件 tap；已改用确定性坐标 tap + 进程存活 + FATAL 计数完成导航验证 |
 | 竖版角色 PNG / 全套图标重绘 | BLOCKED_EXTERNAL | Agnes AIGC 图像生成服务此前 503 不可用，未生成新素材；现沿用既有 coach_* 横版 PNG，代码版式先行 |
 | 其它机型（>API28） | 未验证 | 本次仅在 Android 9 / API 28 真机验证；compileSdk 34 与 AndroidX 版本理论兼容更高 API，但未实机回归 |
