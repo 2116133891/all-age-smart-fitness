@@ -58,6 +58,9 @@ fun OnboardingScreen(
     val pages = remember { onboardingPages() }
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
+    // P0-C/P1-E：引导页立绘跟随用户所选教练风格（REALISTIC→真人立绘 / ANIMATED→3D 卡通）。
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coachStyle = remember { com.quannian.zhidong.model.CoachStyleStore.load(context) }
     val last = pagerState.currentPage == pages.lastIndex
     val current = pages[pagerState.currentPage]
 
@@ -93,7 +96,7 @@ fun OnboardingScreen(
             state = pagerState,
             modifier = Modifier.fillMaxWidth().weight(1f)
         ) { index ->
-            BoardPageView(page = pages[index])
+            BoardPageView(page = pages[index], coachStyle = coachStyle)
         }
 
         // 底部：进度点 + 主 CTA
@@ -140,7 +143,7 @@ fun OnboardingScreen(
 
 /** 单页：大居中竖版透明教练主体 → 年龄段主标题 → 短简介 → 功能短句。 */
 @Composable
-private fun BoardPageView(page: BoardPage) {
+private fun BoardPageView(page: BoardPage, coachStyle: com.quannian.zhidong.model.CoachStyle) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -158,7 +161,8 @@ private fun BoardPageView(page: BoardPage) {
             CoachVisual.CoachPortrait(
                 ageId = page.ageId,
                 modifier = Modifier,
-                size = portraitH
+                size = portraitH,
+                style = coachStyle
             )
         }
 

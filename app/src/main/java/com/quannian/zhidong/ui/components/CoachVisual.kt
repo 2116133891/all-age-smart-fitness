@@ -56,21 +56,36 @@ object CoachVisual {
     /** 年龄段 -> 真实数字教练 PNG 资源 id（未知年龄回退到青年）。
      *  V2 三大人群：青年 / 中年 / 银龄（coach_youth / coach_middle / coach_senior）。
      *  保留 child 映射以兼容旧画像数据。 */
-    fun coachResource(ageId: String): Int = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
-        // child 已废弃，归一化到 youth（见 coachResource 的 normalizeAgeId）
-        "middle" -> R.drawable.coach_middle
-        "senior" -> R.drawable.coach_senior
-        else -> R.drawable.coach_youth
+    fun coachResource(ageId: String, style: com.quannian.zhidong.model.CoachStyle = com.quannian.zhidong.model.CoachStyle.ANIMATED): Int {
+        // P0-C/P1-E：风格驱动。REALISTIC 走用户提供的真人教练横版资源；ANIMATED 沿用 3D 卡通。
+        if (style == com.quannian.zhidong.model.CoachStyle.REALISTIC) return R.drawable.coach_realistic_row
+        val norm = com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)
+        return when (norm) {
+            "middle" -> R.drawable.coach_middle
+            "senior" -> R.drawable.coach_senior
+            else -> R.drawable.coach_youth
+        }
     }
 
     /**
      * 竖版全身立绘资源（V3.5 新增，736x1312 · 真透明 alpha · 全身居中）。
      *  用于引导页 / 个人中心 / 年龄首页等大主视觉场景，映射规则与 coachResource 一致。
      */
-    fun coachPortraitResource(ageId: String): Int = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
-        "middle" -> R.drawable.coach_middle_portrait
-        "senior" -> R.drawable.coach_senior_portrait
-        else -> R.drawable.coach_youth_portrait
+    fun coachPortraitResource(ageId: String, style: com.quannian.zhidong.model.CoachStyle = com.quannian.zhidong.model.CoachStyle.ANIMATED): Int {
+        val norm = com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)
+        if (style == com.quannian.zhidong.model.CoachStyle.REALISTIC) {
+            // P0-C：用户提供的真人教练竖版立绘（studio 渐变背景，放入圆角容器即照片卡效果）。
+            return when (norm) {
+                "middle" -> R.drawable.coach_realistic_middle_portrait
+                "senior" -> R.drawable.coach_realistic_senior_portrait
+                else -> R.drawable.coach_realistic_youth_portrait
+            }
+        }
+        return when (norm) {
+            "middle" -> R.drawable.coach_middle_portrait
+            "senior" -> R.drawable.coach_senior_portrait
+            else -> R.drawable.coach_youth_portrait
+        }
     }
 
     /**
@@ -81,7 +96,8 @@ object CoachVisual {
     fun CoachPortrait(
         ageId: String,
         modifier: Modifier = Modifier,
-        size: Dp = 320.dp
+        size: Dp = 320.dp,
+        style: com.quannian.zhidong.model.CoachStyle = com.quannian.zhidong.model.CoachStyle.ANIMATED
     ) {
         val ratio = 736f / 1312f
         Box(
@@ -91,7 +107,7 @@ object CoachVisual {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(coachPortraitResource(ageId)),
+                painter = painterResource(coachPortraitResource(ageId, style)),
                 contentDescription = "数字教练立绘 · " + ageOf(ageId),
                 contentScale = ContentScale.Fit
             )
@@ -120,7 +136,8 @@ object CoachVisual {
     fun CoachAvatar(
         ageId: String,
         modifier: Modifier = Modifier,
-        size: Dp = 120.dp
+        size: Dp = 120.dp,
+        style: com.quannian.zhidong.model.CoachStyle = com.quannian.zhidong.model.CoachStyle.ANIMATED
     ) {
         val soft = Palette.ageSoft(ageId)
         // 教练 PNG 实际为横版 1248×832（≈1.5:1，全身站立 + 浅灰底）。
@@ -136,7 +153,7 @@ object CoachVisual {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(coachResource(ageId)),
+                painter = painterResource(coachResource(ageId, style)),
                 contentDescription = "数字教练 · ${ageOf(ageId)}",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier

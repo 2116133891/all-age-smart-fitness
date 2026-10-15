@@ -52,9 +52,13 @@ import com.quannian.zhidong.ui.theme.Palette
 fun CoachAvatar(
     ageId: String,
     modifier: Modifier = Modifier,
-    size: Dp = 120.dp
+    size: Dp = 120.dp,
+    /** P1-E：显式教练风格；null=跟随用户当前所选风格（CoachStyleStore.load）。*/
+    style: com.quannian.zhidong.model.CoachStyle? = null
 ) {
-    CoachVisual.CoachAvatar(ageId = ageId, modifier = modifier, size = size)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val resolved = style ?: com.quannian.zhidong.model.CoachStyleStore.load(ctx)
+    CoachVisual.CoachAvatar(ageId = ageId, modifier = modifier, size = size, style = resolved)
 }
 
 // ============================================================================

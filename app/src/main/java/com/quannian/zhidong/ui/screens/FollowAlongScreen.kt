@@ -161,6 +161,12 @@ fun FollowAlongScreen(
             vm.onSessionEnd()
         }
     }
+    // P0-A 修复：任何退出路径（系统返回 / tab 切换 / 路由 pop）都释放相机与后台 executor。
+    // 此前缺失会导致 CameraX 用例竞争，并让已 shutdown 的 executor 仍被 onGloballyPositioned
+    // 触发 start() → RejectedExecutionException（主线程未捕获 → 闪退）。
+    DisposableEffect(cameraManager) {
+        onDispose { cameraManager.release() }
+    }
 
     // 响应式：测量整页宽度。宽度大（横屏）→ 左右双栏；窄（竖屏）→ 上下双栏（两画面仍同屏可见）。
     var pageWidthDp by remember { mutableStateOf(0f) }
@@ -362,6 +368,7 @@ internal fun TeachPane(
                     subtitle = "循环静音 · 边看边练",
                     loop = true,
                     muted = true,
+                    fixed16By9 = false,
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 )
             }

@@ -72,7 +72,11 @@ fun TeachingVideoPlayer(
     subtitle: String = "",
     onFullScreen: (() -> Unit)? = null,
     loop: Boolean = false,
-    muted: Boolean = false
+    muted: Boolean = false,
+    /** P0-B：true=容器强制 16:9（旧行为）；false=容器跟随父级高度，
+     * 由 PlayerView resizeMode=FIT 对源视频真实比例做 letterbox，头脚完整入镜不拉伸。
+     * 跟练双画面传 false。 */
+    fixed16By9: Boolean = true
 ) {
     val context = LocalContext.current
 
@@ -150,12 +154,22 @@ fun TeachingVideoPlayer(
         }
 
         // 播放 区（16:9）
-        Box(
-            modifier = Modifier
+        // P0-B：容器策略按 fixed16By9 切换。true=固定 16:9；false=吃掉剩余高度、由 FIT 对源比例 letterbox。
+        val videoBoxModifier: Modifier = if (fixed16By9) {
+            Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp)
                 .aspectRatio(16f / 9f)
-                .background(Color(0xFF0E1420), RoundedCornerShape(16.dp)),
+                .background(Color(0xFF0E1420), RoundedCornerShape(16.dp))
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(8.dp)
+                .background(Color(0xFF0E1420), RoundedCornerShape(16.dp))
+        }
+        Box(
+            modifier = videoBoxModifier,
             contentAlignment = Alignment.Center
         ) {
             AndroidView(
@@ -164,6 +178,7 @@ fun TeachingVideoPlayer(
                     PlayerView(it).apply {
                         setPlayer(player)
                         useController = true
+                        // PlayerView 默认 resizeMode 即 RESIZE_MODE_FIT：源视频原始比例保持、中性黑边填充，不裁切/不拉伸。
                     }
                 }
             )

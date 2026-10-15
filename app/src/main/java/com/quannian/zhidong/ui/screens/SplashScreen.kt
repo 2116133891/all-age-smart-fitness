@@ -38,6 +38,9 @@ fun SplashScreen(modifier: Modifier = Modifier, onDone: () -> Unit) {
         kotlinx.coroutines.delay(700)
         onDone()
     }
+    // P0-C/P1-E：启动页立绘跟随用户所选教练风格；仍不初始化 CameraX/MediaPipe。
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coachStyle = remember { com.quannian.zhidong.model.CoachStyleStore.load(context) }
 
     Box(
         modifier = modifier
@@ -78,7 +81,8 @@ fun SplashScreen(modifier: Modifier = Modifier, onDone: () -> Unit) {
             CoachVisual.CoachPortrait(
                 ageId = "youth",
                 modifier = Modifier,
-                size = 300.dp
+                size = 300.dp,
+                style = coachStyle
             )
             Spacer(Modifier.height(20.dp))
             Text(

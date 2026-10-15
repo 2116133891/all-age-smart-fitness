@@ -56,6 +56,9 @@ class CameraManager(
     var running = false
         private set
 
+    /** 资源是否已释放。释放后所有 start/restart/switch 幂等返回，executor 已关闭不再接受任务。 */
+    private var released = false
+
     /** 已绑定的 PreviewView 引用（切换 / 重绑时复用）。 */
     private var viewRef: PreviewView? = null
 
@@ -108,6 +111,13 @@ class CameraManager(
     fun start(view: PreviewView) {
         // 幂等保护：UI 重组 / AndroidView 可能重复 start，避免双重绑定 use case
         if (running) return
+        // 资源已释放（离开跟练页后 executor 已 shutdown）：onGloballyPositioned 仍可能触发
+        // start()，此时任何 poseInitExecutor.execute 都会抛 RejectedExecutionException（主线程未捕获 → 闪退）。
+        // 直接返回，绝不向已关闭的 executor 提交任务。
+        if (released) {
+            Log.w(tag, "start() 被忽略：相机资源已释放")
+            return
+        }
         Log.i(tag, "start() called (running=false, facingBack=$facingBack)")
         viewRef = view
         val provider = getProvider()
@@ -127,11 +137,24 @@ class CameraManager(
         }
         // 后台加载姿态模型，避免 5.7MB 模型阻塞预览。
         onPoseReady(false)
-        poseInitExecutor.execute {
-            Log.d(tag, "开始后台初始化 PoseDetector")
-            val ok = poseDetector.init()
-            Log.i(tag, "PoseDetector init 结果: $ok")
-            runOnUiThread { onPoseReady(ok) }
+        submitPoseInit()
+    }
+
+    /**
+     * 提交后台姿态模型初始化；若 executor 已关闭（release 竞态）则静默降级，
+     * 不再让 RejectedExecutionException 传播到主线程导致整应用闪退。
+     */
+    private fun submitPoseInit() {
+        try {
+            poseInitExecutor.execute {
+                Log.d(tag, "开始后台初始化 PoseDetector")
+                val ok = poseDetector.init()
+                Log.i(tag, "PoseDetector init 结果: $ok")
+                runOnUiThread { onPoseReady(ok) }
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            Log.w(tag, "PoseDetector 初始化任务被拒绝（executor 已关闭），降级为未就绪")
+            onPoseReady(false)
         }
     }
 
@@ -142,6 +165,7 @@ class CameraManager(
      *  复用同一 [owner] / [viewRef]，避免多实例竞争 CameraX 用例导致黑屏。
      */
     fun restart() {
+        if (released) return
         val view = viewRef ?: return
         val provider = getProvider() ?: return
         Log.i(tag, "restart() 重新绑定相机 (facingBack=$facingBack)")
@@ -152,10 +176,7 @@ class CameraManager(
             onPoseReady(false)
             bindUseCases(view, provider, facingBack)
             running = true
-            poseInitExecutor.execute {
-                val ok = poseDetector.init()
-                runOnUiThread { onPoseReady(ok) }
-            }
+            submitPoseInit()
         } catch (e: Exception) {
             Log.e(tag, "restart 失败", e)
             onFrame(emptyList())
@@ -164,6 +185,7 @@ class CameraManager(
 
     /** 前后摄像头切换：默认后置，切换时 unbind → 重绑。 */
     fun switchCamera() {
+        if (released) return
         if (!running) return
         val view = viewRef ?: return
         val provider = getProvider() ?: return
@@ -291,9 +313,11 @@ class CameraManager(
     }
 
     fun release() {
+        if (released) return
+        released = true
         stop()
-        analysisExecutor.shutdown()
-        poseInitExecutor.shutdown()
+        try { analysisExecutor.shutdown() } catch (_: Exception) {}
+        try { poseInitExecutor.shutdown() } catch (_: Exception) {}
         poseDetector.close()
         viewRef = null
     }

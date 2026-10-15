@@ -118,6 +118,19 @@ fun YouthBodyTestScreen(
             }
         }
 
+        // P0-D：年龄段 + 教练介绍（与中/老年统一模板一致的「介绍」头块）
+        item {
+            Card() {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("青少年 · 数字教练", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
+                        Spacer(Modifier.height(3.dp))
+                        Text("科学训练 强健体魄：体测项目训练 + 动作示范与跟练，每次进步都记录。", fontSize = 12.sp, color = Palette.inkSoft, lineHeight = 16.sp)
+                    }
+                }
+            }
+        }
+
         // ── 动态跟练 · 测试项（有动作示范视频，逐项独立入口） ──
         item { SectionLabel("动态 跟练 · 测试（有 动作 示范）", Palette.accent) }
         items(motionItems) { item ->
