@@ -1,51 +1,42 @@
 package com.quannian.zhidong.ui.screens
 
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.quannian.zhidong.ui.components.CoachAvatar
+import com.quannian.zhidong.ui.components.CoachVisual
 import com.quannian.zhidong.ui.theme.Palette
 
 /**
- * 启动页：数字人 + 品牌名 + 加载进度条。
+ * 启动页（V3.5）：干净明亮的运动科技视觉，品牌名 + 副标题 + 教练形象。
+ *
+ * - 无模拟进度条、无"准备摄像头/加载模型"文案（冷启动不做 CameraX/MediaPipe 初始化，
+ *   相关能力在进入跟练/姿态识别页时才惰性创建）。
+ * - 仅保留短暂的品牌定版停留，随后直接进入主流程；不阻塞任何真实服务。
  */
 @Composable
 fun SplashScreen(modifier: Modifier = Modifier, onDone: () -> Unit) {
-    var progress by remember { mutableFloatStateOf(0f) }
-    var ready by remember { mutableStateOf(false) }
-
-    // 模拟"准备摄像头 + 加载模型"过程，避免空屏
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(450); progress = 0.33f
-        kotlinx.coroutines.delay(450); progress = 0.7f
-        kotlinx.coroutines.delay(500); progress = 1f
-        kotlinx.coroutines.delay(400); ready = true
-    }
-    LaunchedEffect(ready) {
-        if (ready) onDone()
+        // 品牌定版：短促停留即可，无任何假加载
+        kotlinx.coroutines.delay(700)
+        onDone()
     }
 
     Box(
@@ -54,20 +45,42 @@ fun SplashScreen(modifier: Modifier = Modifier, onDone: () -> Unit) {
             .background(Palette.bg),
         contentAlignment = Alignment.Center
     ) {
+        // 背景轻光斑（运动科技感，不使用任何进度指示）
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(260.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Palette.accentSoft, Palette.bg),
+                        center = Offset(0f, 0f)
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .size(300.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Palette.accentSoft, Palette.bg),
+                        center = Offset(0f, 0f)
+                    )
+                )
+        )
+
         Column(
+            modifier = Modifier.padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(150.dp)
-                    .background(Palette.accentSoft, RoundedCornerShape(75.dp))
-                    .padding(30.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CoachAvatar(ageId = "youth", size = 100.dp)
-            }
-            Spacer(Modifier.height(24.dp))
+            // 竖版透明全身教练立绘（与引导/个人中心统一主视觉）
+            CoachVisual.CoachPortrait(
+                ageId = "youth",
+                modifier = Modifier,
+                size = 300.dp
+            )
+            Spacer(Modifier.height(20.dp))
             Text(
                 text = "全龄智动",
                 fontSize = 34.sp,
@@ -82,19 +95,6 @@ fun SplashScreen(modifier: Modifier = Modifier, onDone: () -> Unit) {
                 color = Palette.inkSoft,
                 letterSpacing = 1.sp
             )
-            Spacer(Modifier.height(30.dp))
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                LinearProgressIndicator(
-                    progress = progress,
-                    modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = Palette.accent,
-                    trackColor = Palette.line,
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("正在准备摄像头与姿态识别模型…", fontSize = 12.sp, color = Palette.inkSoft)
         }
     }
 }

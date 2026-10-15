@@ -135,6 +135,33 @@ class CameraManager(
         }
     }
 
+    /**
+     * 黑屏 / 初始化失败时重新绑定（不释放、不重建实例）：
+     *   - 先 unbind 旧用例，再按当前朝向重绑 Preview + ImageAnalysis；
+     *   - 重启后台姿态模型初始化。
+     *  复用同一 [owner] / [viewRef]，避免多实例竞争 CameraX 用例导致黑屏。
+     */
+    fun restart() {
+        val view = viewRef ?: return
+        val provider = getProvider() ?: return
+        Log.i(tag, "restart() 重新绑定相机 (facingBack=$facingBack)")
+        try {
+            provider.unbindAll()
+            running = false
+            onFrame(emptyList())
+            onPoseReady(false)
+            bindUseCases(view, provider, facingBack)
+            running = true
+            poseInitExecutor.execute {
+                val ok = poseDetector.init()
+                runOnUiThread { onPoseReady(ok) }
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "restart 失败", e)
+            onFrame(emptyList())
+        }
+    }
+
     /** 前后摄像头切换：默认后置，切换时 unbind → 重绑。 */
     fun switchCamera() {
         if (!running) return

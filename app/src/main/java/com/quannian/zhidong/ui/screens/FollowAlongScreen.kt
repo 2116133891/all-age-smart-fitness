@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -112,7 +113,8 @@ fun FollowAlongScreen(
     val teachVideo = remember(exerciseId) { TeachingVideoRepository.teachingVideoFor(exerciseId) }
     val videoUsable = teachVideo != null && teachVideo.assetPath.isNotBlank()
 
-    // 关键修复：cameraManager 在组合期创建，避免 AndroidView factory 早于 LaunchedEffect 导致黑屏。
+    // 关键修复：cameraManager 在组合期创建单实例（幂等 start/release），避免 AndroidView factory 早于
+    // LaunchedEffect 导致黑屏；黑屏/初始化失败走 [CameraManager.restart()] 重绑，不重建实例、不竞争 CameraX 用例。
     val cameraManager = remember {
         CameraManager(
             context = context,
@@ -210,46 +212,45 @@ fun FollowAlongScreen(
 
         Spacer(Modifier.height(10.dp))
 
-        // ── 双栏：左侧教学视频 + 右侧实时摄像头（同屏同时可见，非 tab 切换） ──
-        val sideBySide = pageWidthDp > 700f
-        if (sideBySide) {
-            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                TeachPane(
-                    exId = exerciseId, exName = ex.name, exSteps = ex.steps,
-                    teachVideo = teachVideo, videoUsable = videoUsable,
-                    ageColor = ageColor, modifier = Modifier.weight(0.46f)
-                )
-                CameraPane(
-                    cameraManager = cameraManager, landmarks = landmarks,
-                    facingBack = facingBack, poseReady = poseReady,
-                    hasPermission = hasPermission,
-                    onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
-                    modifier = Modifier.weight(0.54f)
-                )
-            }
-        } else {
-            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // 竖屏：视频在上、摄像头在下，两块都可见（不裁成过窄小窗）
-                TeachPane(
-                    exId = exerciseId, exName = ex.name, exSteps = ex.steps,
-                    teachVideo = teachVideo, videoUsable = videoUsable,
-                    ageColor = ageColor, modifier = Modifier.fillMaxWidth().weight(0.42f)
-                )
-                CameraPane(
-                    cameraManager = cameraManager, landmarks = landmarks,
-                    facingBack = facingBack, poseReady = poseReady,
-                    hasPermission = hasPermission,
-                    onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
-                    modifier = Modifier.fillMaxWidth().weight(0.58f)
-                )
+        // ── V3.5 P0-7：强制竖屏「上下堆叠」：上=教练示范视频，下=实时摄像头+骨架 ──
+        // 不再区分横/竖屏并排，始终上视频下相机，两块同屏同时可见（非 tab 切换）。
+        // 用 BoxWithConstraints 按可用高度自适应：空间充足时各占权重，空间紧张时压缩
+        // 标题/次要指标/间距（绝不移除任一块），视频保持源宽高比、相机保持相机宽高比，
+        // 不 fillBounds 拉伸、不切头脚；宽高比不一致时用中性底色填充。
+        Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                val avail = maxHeight
+                // 空间紧张（< 520dp 可用高）→ 压缩两块权重，保证两块都可见
+                val tight = avail < 520.dp
+                val videoW = if (tight) 0.46f else 0.44f
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TeachPane(
+                        exId = exerciseId, exName = ex.name, exSteps = ex.steps,
+                        teachVideo = teachVideo, videoUsable = videoUsable,
+                        ageColor = ageColor,
+                        modifier = Modifier.fillMaxWidth().weight(videoW)
+                    )
+                    CameraPane(
+                        cameraManager = cameraManager, landmarks = landmarks,
+                        facingBack = facingBack, poseReady = poseReady,
+                        hasPermission = hasPermission,
+                        onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
+                        onRetry = {
+                            // 黑屏/初始化失败：重绑同一相机实例（不重建、不竞争 CameraX 用例）
+                            cameraManager.restart()
+                        },
+                        modifier = Modifier.fillMaxWidth().weight(1f)
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(10.dp))
-
-        // 双栏视野说明（本页两种方向都同时显示「示范 + 跟练」两块画面，不 tab 切换）。
+        Spacer(Modifier.height(6.dp))
         Text(
-            "💡 左侧为示范视频，右侧为你的实时画面与识别骨架，两块同屏对比跟练。",
+            "📺 上方为示范视频，下方为你的实时画面与识别骨架，上下同屏对比跟练。",
             fontSize = 11.sp, color = Palette.inkSoft, modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(6.dp))
@@ -392,6 +393,7 @@ internal fun CameraPane(
     poseReady: Boolean,
     hasPermission: Boolean,
     onGrant: () -> Unit,
+    onRetry: () -> Unit = {},
     modifier: Modifier
 ) {
     Box(
@@ -404,6 +406,10 @@ internal fun CameraPane(
             Box(Modifier.fillMaxSize()) {
                 var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
                 var crop: RectF by remember { mutableStateOf(RectF(0f, 0f, 1f, 1f)) }
+                // V3.5 黑屏根因修复：PreviewView 在 AndroidView factory 阶段往往尚未
+                // 测量（0 尺寸），此刻直接 start() 会让 CameraX 把 Surface 绑到 0 尺寸上
+                // → 画面黑。改为：factory 只创建并记录 PreviewView，真正 start() 延后到
+                // 该 view 有非 0 测量尺寸时（onGloballyPositioned）再触发一次（幂等）。
                 AndroidView(
                     factory = { ctx ->
                         val pv = PreviewView(ctx)
@@ -411,11 +417,16 @@ internal fun CameraPane(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
-                        cameraManager.start(pv)
                         previewViewRef = pv
                         pv
                     },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().onGloballyPositioned { coords ->
+                        // 仅当首次真正拿到非 0 尺寸时启动相机（CameraManager.start 幂等）
+                        val pv = previewViewRef ?: return@onGloballyPositioned
+                        if (coords.size.width > 0 && coords.size.height > 0) {
+                            cameraManager.start(pv)
+                        }
+                    },
                     onRelease = { cameraManager.release(); previewViewRef = null }
                 )
                 LaunchedEffect(previewViewRef, facingBack) {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -36,21 +36,18 @@ import com.quannian.zhidong.model.AgeGroupConfig
 import com.quannian.zhidong.ui.components.CoachVisual
 import com.quannian.zhidong.ui.components.Pill
 import com.quannian.zhidong.ui.theme.Palette
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 
 /**
- * V3.3 三张引导页（spec §2）：统一竖屏版式。
+ * V3.5 三张引导页（spec P0-4）：统一竖屏版式，大居中竖版透明教练为主视觉。
  *
- *  每页版式：顶部"跳过" → 上方小标签 → 中部醒目竖版数字教练全身 →
- *  数字人下方年龄段主标题（居中）→ 一句简短介绍 → 2~3 条短功能说明 →
+ *  每页版式：右上角"跳过" → 中部大居中竖版透明全身教练（Fit，不裁切头脚）→
+ *  数字人下方年龄段主标题（Pill，居中）→ 一句简短介绍 → 2~3 条短功能说明 →
  *  底部进度指示 + 主 CTA（前 2 页"下一步"，末页"开始体验"）。
  *
- *  - 三段内容固定（spec §2.2）：青少年 / 中青年 / 中老年。
- *  - 主名称取自 [AgeGroupConfig.band(id).title]（统一配置层，不写死）。
- *  - 数字人用 [CoachVisual] 按真实宽高比展示（Fit，不 fillBounds 拉伸）。
- *  - 整页结构对三页完全一致，只有文案/主色/角色素材不同。
+ *  - 顶部只保留右上角"跳过"，去掉冗余年龄/品牌小标签。
+ *  - 三页使用同一容器比例（立绘 736:1312，Fit 缩放），仅文案/主色/立绘素材不同。
+ *  - 大居中竖版透明立绘用 [CoachVisual.CoachPortrait]（真透明 alpha + 全身居中 + Fit）。
+ *  - 整页结构对三页完全一致，保证窄屏/大系统字体下主 CTA 始终可见。
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -70,16 +67,11 @@ fun OnboardingScreen(
             .background(onboardBrush(current.color))
             .padding(horizontal = 24.dp)
     ) {
-        // 顶部：小标签（左） + 跳过（右）
+        // 顶部：仅右上角"跳过"（去掉冗余小标签）
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.End
         ) {
-            Text(
-                "全龄智动 · 科学运动",
-                fontSize = 13.sp, color = Palette.inkSoft, fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp, modifier = Modifier.weight(1f)
-            )
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
@@ -94,9 +86,9 @@ fun OnboardingScreen(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
 
-        // 中部：三页可滑动内容（竖版数字人主体）
+        // 中部：三页可滑动内容（大居中竖版透明教练主体）
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxWidth().weight(1f)
@@ -146,46 +138,54 @@ fun OnboardingScreen(
     }
 }
 
-/** 单页：小标签下 → 竖版数字人主体 → 年龄段主标题 → 短简介 → 功能短句。 */
+/** 单页：大居中竖版透明教练主体 → 年龄段主标题 → 短简介 → 功能短句。 */
 @Composable
 private fun BoardPageView(page: BoardPage) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
 
-        // 数字人：占页面主体视觉面积（Fit 保持真实比例，不裁切/拉伸）。
-        Box(
-            modifier = Modifier.fillMaxWidth().weight(0.62f),
+        // 大居中竖版透明教练：占页面上部主体，Fit 保持立绘真实比例（不裁切/拉伸）。
+        // 三页同一容器比例（立绘 736:1312），高度随可用空间自适应并封顶。
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth().weight(0.52f),
             contentAlignment = Alignment.Center
         ) {
-            // 竖版角色容器：按 3:4 画布，ContentScale.Fit 让全身完整可见
-            Image(
-                painter = painterResource(CoachVisual.coachResource(page.ageId)),
-                contentDescription = "数字教练 · ${AgeGroupConfig.ageLabel(page.ageId)}",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .width(220.dp)
-                    .height(290.dp)
+            // maxHeight 已是 Dp（ConstrainedLayoutScope 扩展属性），直接比例换算
+            val portraitH = minOf(430.dp, maxOf(240.dp, maxHeight * 0.88f))
+            CoachVisual.CoachPortrait(
+                ageId = page.ageId,
+                modifier = Modifier,
+                size = portraitH
             )
         }
 
-        Spacer(Modifier.height(14.dp))
-
-        // 数字人下方：年龄段主标题（居中）
-        Pill(AgeGroupConfig.band(page.ageId).title, page.color)
         Spacer(Modifier.height(10.dp))
 
-        Text(page.title, fontSize = 24.sp, color = Palette.ink, fontWeight = FontWeight.ExtraBold)
+        // 数字人下方：年龄段主标题（Pill 居中，统一配置层，不写死）
+        Pill(AgeGroupConfig.band(page.ageId).title, page.color)
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            page.title,
+            fontSize = 22.sp,
+            color = Palette.ink,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(Modifier.height(6.dp))
         Text(
             page.intro,
-            fontSize = 14.sp, color = Palette.inkSoft,
-            textAlign = TextAlign.Center, lineHeight = 20.sp,
+            fontSize = 14.sp,
+            color = Palette.inkSoft,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
         // 2~3 条短功能说明（每条 ≤12 字）。
         // 注意：Compose 的 weight 必须 > 0；此处用自然高度（wrap content），不占剩余权重。
@@ -208,25 +208,25 @@ private fun BoardPageView(page: BoardPage) {
     }
 }
 
-/** 三页固定内容（spec §2.2）。主名称统一走 AgeGroupConfig。 */
+/** 三页固定内容（spec P0-4 指定文案）。主名称统一走 AgeGroupConfig。 */
 private fun onboardingPages(): List<BoardPage> = listOf(
     BoardPage(
         ageId = "youth", color = Palette.youth,
         title = "科学训练，逐步提升",
-        intro = "体测训练与动作指导，一步步练得更科学。",
-        points = listOf("体测项目训练", "动作示范与跟练", "训练记录与计划")
+        intro = "体测训练与动作指导，让每一步练习更有方向。",
+        points = listOf("体测项目训练", "动作示范与跟练", "记录每次进步")
     ),
     BoardPage(
         ageId = "middle", color = Palette.middle,
         title = "高效运动，改善状态",
-        intro = "从力量、柔韧到肩颈舒缓，合理安排日常训练。",
-        points = listOf("日常力量训练", "肩颈与柔韧改善", "个性化运动建议")
+        intro = "灵活安排力量、柔韧与日常运动。",
+        points = listOf("力量与体能", "肩颈与柔韧", "个性化运动建议")
     ),
     BoardPage(
         ageId = "senior", color = Palette.senior,
         title = "科学活动，安心运动",
-        intro = "从低强度活动开始，逐步改善平衡与活动能力。",
-        points = listOf("八段锦与太极", "平衡与柔韧练习", "适合自身能力的训练")
+        intro = "从适合自身的活动开始，循序渐进。",
+        points = listOf("八段锦与太极", "平衡与柔韧", "安全运动指导")
     )
 )
 

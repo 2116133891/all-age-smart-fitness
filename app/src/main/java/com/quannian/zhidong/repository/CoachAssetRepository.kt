@@ -79,4 +79,90 @@ object CoachAssetRepository {
     /** 按年龄段返回头像资源 id（复用 CoachVisual 的唯一映射，避免各页写死）。 */
     fun avatarResourceId(ageGroup: String): Int =
         com.quannian.zhidong.ui.components.CoachVisual.coachResource(ageGroup)
+
+    /**
+     * V3.5 统一资源解析结果：按 ageGroup + itemKey + style + assetType 取资源。
+     *  - [resolved]：解析到的视频（或 null，诚实空态）。
+     *  - [styleMatched]：是否真正匹配请求风格。
+     *  - [note]：不匹配/缺失时的诚实提示。
+     *  - [methodOnly]：该 itemKey 是否为仅方法说明项（BMI/肺活量，无动作视频）。
+     */
+    data class AssetResolution(
+        val resolved: BodyTestVideo?,
+        val styleMatched: Boolean,
+        val note: String = "",
+        val methodOnly: Boolean = false
+    )
+
+    /**
+     * V3.5 统一解析（纯函数，JVM 可测）：按 体测 itemKey + 用户风格 + 资源类型 + 年龄段 取资源。
+     *
+     *  红线（spec P0-5 / P0-6）：
+     *   - 资源缺失 → [AssetResolution.resolved]=null，绝不拿无关视频跨风格/跨动作填空；
+     *   - 仅方法项（BMI/肺活量）→ [AssetResolution.methodOnly]=true，无动作视频，UI 走录入/说明；
+     *   - 风格不覆盖该视频所属年龄段 → styleMatched=false + 诚实 note。
+     *
+     *  @param itemKey   体测 itemKey（见 TeachingVideoRepository.videoForItem 的权威映射）
+     *  @param gender    性别（PULLUP_SITUP 双视频区分）
+     *  @param style     用户所选教练风格
+     *  @param assetType AVATAR（头像，走 CoachVisual）/ DEMO_VIDEO / FOLLOW_VIDEO（视频）
+     */
+    fun resolveAsset(
+        itemKey: String,
+        gender: String,
+        style: CoachStyle,
+        assetType: AssetType,
+        ageGroup: String = "youth"
+    ): AssetResolution {
+        val normalizedAge = com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageGroup)
+
+        if (assetType == AssetType.AVATAR) {
+            // 头像始终按年龄段立绘返回（风格不改头像资源可用性，仅标注），绝不返回 null。
+            val note = if (ownerAgeOf(itemKey) == normalizedAge) "" else "头像按当前年龄段展示"
+            return AssetResolution(
+                resolved = TeachingVideoRepository.videoForItem(itemKey, gender),
+                styleMatched = ownerAgeOf(itemKey) == normalizedAge,
+                note = note
+            )
+        }
+
+        // 视频解析链：videoForItem（youth BodyTestItemKey + warmup）→ byId（itemKey 本身即视频 id，
+        // 如 middle_core / senior_baduanjin）→ null（诚实空态）。
+        val video = TeachingVideoRepository.videoForItem(itemKey, gender)
+            ?: TeachingVideoRepository.byId(itemKey)
+        // 仅方法项：无动作视频（BMI / 肺活量）
+        val methodOnly = TeachingVideoRepository.isMethodOnlyItem(itemKey)
+        if (methodOnly || video == null) {
+            return AssetResolution(
+                resolved = video,
+                styleMatched = false,
+                note = if (methodOnly) "此项为独立测评录入项，无动作示范视频" else "无对应示范视频",
+                methodOnly = methodOnly
+            )
+        }
+
+        val sub = resolveVideo(normalizedAge, style, video.id)
+        return AssetResolution(
+            resolved = sub.video,
+            styleMatched = sub.styleMatched,
+            note = sub.note
+        )
+    }
+
+    /**
+     * 某 itemKey 的权威视频所属年龄段（用于风格匹配判定）。
+     *  解析顺序：
+     *   1) [TeachingVideoRepository.videoFor]（youth 的 BodyTestItemKey 路径，含性别分支）；
+     *   2) 直接 [TeachingVideoRepository.byId]（itemKey 本身即视频 id，如 middle_core / senior_baduanjin）；
+     *   3) 回退 "youth"。
+     *  始终返回该动作**权威视频**的所属年龄段，不因风格而变。
+     */
+    fun ownerAgeOf(itemKey: String): String {
+        val repo = com.quannian.zhidong.repository.TeachingVideoRepository
+        val viaItem = repo.videoFor(itemKey)
+        if (viaItem != null) return viaItem.ageId
+        val viaId = repo.byId(itemKey)
+        if (viaId != null) return viaId.ageId
+        return "youth"
+    }
 }

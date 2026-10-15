@@ -63,6 +63,41 @@ object CoachVisual {
         else -> R.drawable.coach_youth
     }
 
+    /**
+     * 竖版全身立绘资源（V3.5 新增，736x1312 · 真透明 alpha · 全身居中）。
+     *  用于引导页 / 个人中心 / 年龄首页等大主视觉场景，映射规则与 coachResource 一致。
+     */
+    fun coachPortraitResource(ageId: String): Int = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
+        "middle" -> R.drawable.coach_middle_portrait
+        "senior" -> R.drawable.coach_senior_portrait
+        else -> R.drawable.coach_youth_portrait
+    }
+
+    /**
+     * 竖版全身立绘主视觉（V3.5）：透明 alpha · ContentScale.Fit · 不裁切头脚。
+     *  容器宽高比固定 = 立绘 736:1312；[size] 语义为容器高度。
+     */
+    @Composable
+    fun CoachPortrait(
+        ageId: String,
+        modifier: Modifier = Modifier,
+        size: Dp = 320.dp
+    ) {
+        val ratio = 736f / 1312f
+        Box(
+            modifier = modifier
+                .height(size)
+                .width(size * ratio),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(coachPortraitResource(ageId)),
+                contentDescription = "数字教练立绘 · " + ageOf(ageId),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+
     /** 年龄段中文短名（无障碍 / 描述用）。 */
     fun ageOf(ageId: String): String = when (com.quannian.zhidong.model.AgeGroupConfig.normalizeAgeId(ageId)) {
         // child 已废弃

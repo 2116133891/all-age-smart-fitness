@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -88,8 +89,19 @@ fun FollowAlongItemScreen(
     val repo = remember { BodyTestRepository(context) }
     val scope = rememberCoroutineScope()
 
-    val teachVideo = remember(itemKey, gender) { TeachingVideoRepository.videoForItem(itemKey, gender) }
+    // V3.5 P0-5：示范视频/头像按 用户教练风格 + 年龄段 真正解析（年龄组由该体测项所属决定）。
+    val coachStyle = remember { com.quannian.zhidong.model.CoachStyleStore.load(context) }
+    val assetAge = remember(itemKey) { com.quannian.zhidong.repository.CoachAssetRepository.ownerAgeOf(itemKey) }
+    val assetRes = remember(itemKey, gender, coachStyle) {
+        com.quannian.zhidong.repository.CoachAssetRepository.resolveAsset(
+            itemKey = itemKey, gender = gender, style = coachStyle,
+            assetType = com.quannian.zhidong.repository.CoachAssetRepository.AssetType.DEMO_VIDEO,
+            ageGroup = assetAge
+        )
+    }
+    val teachVideo = assetRes.resolved
     val videoUsable = teachVideo != null && teachVideo.assetPath.isNotBlank()
+    val styleNote = if (assetRes.methodOnly) "" else assetRes.note
     val displayName = item?.let { BodyTestCatalog.displayName(it, gender) } ?: itemKey
 
     // 相机（独立实例；onFrame 仅写回 landmarks 供骨架展示，不接分析器、不做自动计数）
@@ -153,7 +165,11 @@ fun FollowAlongItemScreen(
             }
             Column(Modifier.weight(1f)) {
                 Text("跟练 · $displayName", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Palette.ink)
-                Text(TeachingVideoRepository.followCapabilityLabel(itemKey), fontSize = 11.sp, color = Palette.inkSoft)
+                val cap = TeachingVideoRepository.followCapabilityLabel(itemKey)
+                Text(
+                    if (styleNote.isNotBlank()) "$cap · $styleNote" else cap,
+                    fontSize = 11.sp, color = Palette.inkSoft
+                )
             }
             if (item?.genderSplit == true) Pill(displayName, Palette.accent)
             Box(
@@ -169,37 +185,30 @@ fun FollowAlongItemScreen(
 
         Spacer(Modifier.height(10.dp))
 
-        val sideBySide = pageWidthDp > 700f
-        if (sideBySide) {
-            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // V3.5 P0-7：强制竖屏「上下堆叠」：上=教练示范视频，下=实时摄像头+骨架（同 FollowAlongScreen 规则）。
+        // 不区分横/竖屏并排，始终上视频下相机，两块同屏可见；BoxWithConstraints 按可用高度自适应，
+        // 空间紧张时压缩权重但绝不移除任一块；视频/相机保持各自宽高比，不拉伸、不切头脚。
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            val avail = maxHeight
+            val tight = avail < 520.dp
+            val videoW = if (tight) 0.46f else 0.42f
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TeachPane(
                     exId = itemKey, exName = displayName, exSteps = keyPointsOf(teachVideo),
                     teachVideo = teachVideo, videoUsable = videoUsable,
-                    ageColor = Palette.accent, modifier = Modifier.weight(0.46f)
+                    ageColor = Palette.accent, modifier = Modifier.fillMaxWidth().weight(videoW)
                 )
                 ItemCameraPane(
                     cameraManager = cameraManager,
                     facingBack = facingBack,
                     hasPermission = hasPermission,
                     onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
+                    onRetry = { cameraManager.restart() },
                     landmarkBox = landmarkBox, readyBox = readyBox,
-                    modifier = Modifier.weight(0.54f)
-                )
-            }
-        } else {
-            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TeachPane(
-                    exId = itemKey, exName = displayName, exSteps = keyPointsOf(teachVideo),
-                    teachVideo = teachVideo, videoUsable = videoUsable,
-                    ageColor = Palette.accent, modifier = Modifier.fillMaxWidth().weight(0.4f)
-                )
-                ItemCameraPane(
-                    cameraManager = cameraManager,
-                    facingBack = facingBack,
-                    hasPermission = hasPermission,
-                    onGrant = { cameraLauncher.launch(Manifest.permission.CAMERA) },
-                    landmarkBox = landmarkBox, readyBox = readyBox,
-                    modifier = Modifier.fillMaxWidth().weight(0.6f)
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 )
             }
         }
@@ -315,6 +324,7 @@ private fun ItemCameraPane(
     facingBack: Boolean,
     hasPermission: Boolean,
     onGrant: () -> Unit,
+    onRetry: () -> Unit = {},
     landmarkBox: java.util.concurrent.atomic.AtomicReference<List<Landmark>>,
     readyBox: java.util.concurrent.atomic.AtomicReference<Boolean>,
     modifier: Modifier
@@ -337,6 +347,7 @@ private fun ItemCameraPane(
         poseReady = pr,
         hasPermission = hasPermission,
         onGrant = onGrant,
+        onRetry = onRetry,
         modifier = modifier
     )
 }
