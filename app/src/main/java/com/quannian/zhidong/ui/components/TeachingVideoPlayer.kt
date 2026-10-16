@@ -174,15 +174,30 @@ fun TeachingVideoPlayer(
         ) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                factory = {
-                    PlayerView(it).apply {
-                        setPlayer(player)
-                        useController = true
-                        // PlayerView 默认 resizeMode 即 RESIZE_MODE_FIT：源视频原始比例保持、中性黑边填充，不裁切/不拉伸。
+                factory = { ctx ->
+                    // V3.6.1 根因修复：PlayerView 默认使用 SurfaceView，其 Surface 在 window
+                    // 层级渲染，会被 Compose Box 的 .background(0xFF0E1420) 遮挡 → 控制条正常
+                    // 但视频帧不可见（FAIL_BLACK_PLAYER）。改用 ExoPlayer.setVideoTextureView() 绑定
+                    // 裸 TextureView，参与正常 View 合成管线，与 Compose 正确叠加。
+                    val tv = android.view.TextureView(ctx)
+                    tv.layoutParams = android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    tv.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                        override fun onSurfaceTextureAvailable(s: android.graphics.SurfaceTexture, w: Int, h: Int) {
+                            player.setVideoTextureView(tv)
+                        }
+                        override fun onSurfaceTextureSizeChanged(s: android.graphics.SurfaceTexture, w: Int, h: Int) {}
+                        override fun onSurfaceTextureDestroyed(s: android.graphics.SurfaceTexture): Boolean {
+                            player.setVideoTextureView(null)
+                            return true
+                        }
+                        override fun onSurfaceTextureUpdated(s: android.graphics.SurfaceTexture) {}
                     }
+                    tv
                 }
             )
-
             if (errorMsg != null) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color(0xCC0E1420)),
