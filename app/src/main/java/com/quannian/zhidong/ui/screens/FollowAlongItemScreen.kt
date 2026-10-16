@@ -99,9 +99,21 @@ fun FollowAlongItemScreen(
             ageGroup = assetAge
         )
     }
-    val teachVideo = assetRes.resolved
+    // #5 统一权威解析（教学页与跟练页同一来源）：风格专属示范缺失时，回退到「同一动作」的
+    // 权威标准示范视频（TeachingVideoRepository，与独立教学页同源），不做跨动作/跨风格/跨年龄段替换。
+    // 独立教学页直接透传已知 assetPath 故能播放；跟练页重解析为空即导致"视频消失"。此回退消除该不一致。
+    val canonical = remember(itemKey, gender) {
+        com.quannian.zhidong.repository.TeachingVideoRepository.videoForItem(itemKey, gender)
+            ?: com.quannian.zhidong.repository.TeachingVideoRepository.byId(itemKey)
+    }
+    val styleMissing = assetRes.resolved == null && !assetRes.methodOnly
+    val teachVideo = if (styleMissing) canonical else assetRes.resolved
     val videoUsable = teachVideo != null && teachVideo.assetPath.isNotBlank()
-    val styleNote = if (assetRes.methodOnly) "" else assetRes.note
+    val styleNote = when {
+        assetRes.methodOnly -> ""
+        styleMissing && canonical != null -> "风格专属示范暂缺，先播放该动作标准示范"
+        else -> assetRes.note
+    }
     val displayName = item?.let { BodyTestCatalog.displayName(it, gender) } ?: itemKey
 
     // 相机（独立实例；onFrame 仅写回 landmarks 供骨架展示，不接分析器、不做自动计数）
