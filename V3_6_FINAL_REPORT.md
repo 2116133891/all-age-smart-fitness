@@ -9,9 +9,9 @@
 | 项 | 结论 | 证据 |
 |----|------|------|
 | #5 跟练"开始跟练"后视频消失 | **已修复 + 真机 PASS** | 根因：独立教学页直接播 assetPath；`FollowAlongItemScreen` 改用 `CoachAssetRepository.resolveAsset(style)` 重解析，风格缺专属视频时 `resolved=null`→诚实空态。修复：非 method-only 且风格解析为 null 时，回退权威同源 `TeachingVideoRepository.videoForItem(itemKey,gender) ?: byId(itemKey)`，显示"风格专属示范暂缺，先播放该动作标准示范"，不做跨动作/跨风格替换。真机 50米跑跟练页视频正常播放、竖屏双画面（见 `.agnes/work/v36_follow.png`）。 |
-| #13-16 竖屏双画面比例 | **跟练双栏 PASS（专项复核 IN_PROGRESS）** | 真机确认：跟练页示范视频在上、摄像头在下，竖屏、无横屏、无拉伸（letterbox 保留）。独立比例专项截图复核待设备在线。 |
-| #4 青少年体测教练卡"异常拉长蓝竖条" | **BLOCKED_EXTERNAL（根因未定，未盲改）** | 静态源码：YouthBodyTestScreen `SectionLabel` 蓝条为固定 `width(4.dp).height(16.dp)`；教练介绍卡为 Row，全仓该卡片无 `fillMaxHeight`/`matchParentSize`。需真机截图复现才能定位确切 Composable，本轮设备反复离线，**不臆造修复**。 |
-| Part6 视频矩阵（REAL+ANIMATED，逐动作） | **已有 16 真实 MP4 全接入 + 风格仅驱动立绘；多版本视频 IN_PROGRESS** | 见 `V3_6_COACH_VIDEO_MATRIX.md`。设计上示范视频按动作唯一，风格换立绘不重复造视频；BMI/肺活量保持 method-only。缺动作（youth-squat/shoulder）走诚实卡片，不塞无关视频。 |
+| #13-16 竖屏双画面比例 | **PASS（设备恢复后二次真机确认）** | 50米跑跟练页（`v36_follow3.png`）+ 中年肩颈缓解跟练页（`v36_mid_follow.png`）：示范视频在上、摄像头实时画面在下，竖屏、无 force-landscape、无横屏、无拉伸（letterbox 保留）。 |
+| #4 青少年体测教练卡"异常拉长蓝竖条" | **VERIFIED_NO_REPRO（真机未复现，未盲改）** | 设备恢复后截图青少年体测页（`v36_bodytest.png`/`v36_bodytest2.png`）：`SectionLabel` 蓝条（"动态 跟练·测试"）与橙条（"独立测评录入"）均渲染为**正常短竖条**（4dp×16dp，紧贴文字左侧），**未见异常拉长**。静态源码亦无 `fillMaxHeight`/`matchParentSize`。当前构建 7a102f2 未复现；若历史"异常蓝条"由特定数据/空 section 触发，需用户给出触发路径，否则记为已核查无异常。 |
+| Part6 视频矩阵（REAL+ANIMATED，逐动作） | **已有 16 真实 MP4 全接入 + 风格仅驱动立绘；youth/middle 跟练视频真机确认** | 见 `V3_6_COACH_VIDEO_MATRIX.md`。设计上示范视频按动作唯一，风格换立绘不重复造视频；BMI/肺活量保持 method-only。真机确认：青少年 50米跑（video_youth_50m）与中年肩颈缓解（video_middle_neck_shoulder）跟练页视频均正常播放、风格匹配。缺动作（youth-squat/shoulder）走诚实卡片，不塞无关视频。 |
 | Part2 图标接入（品牌/教练/导航/业务） | **MISSING→IN_PROGRESS** | 素材 ZIP 未在本机；仅 4×4 联系表可裁剪可识别 tile。现有 coach_* 立绘沿用前轮资源并经 CoachVisual/CoachAssetRepository 风格驱动（真机 Onboarding 立绘正常）。**未凭空生成同名资源**。 |
 
 ## P1 结果
@@ -30,9 +30,9 @@
 - `V3_6_FINAL_REPORT.md` — 本文件。
 
 ## 剩余阻塞（需外部条件解除后再推进）
-1. **设备 b7a0af21 反复离线**（Windows USB PnP 节点 Error/Disabled，Stop/Start 方法不可用）→ 阻塞 #4 蓝条真机复现、比例专项截图、图标真机核验。
-2. **素材 ZIP / ASSET_MAPPING 缺失** → 阻塞 Part2 全套图标 1:1 替换（不凭空生成）。
-3. **视频生成未启动** → 若确需"同动作双风格视频"，需 agnes 视频工具 + 真机核验后补。
+1. ~~设备 b7a0af21 反复离线~~ → **已恢复在线**（`adb kill-server`+`start-server`）。#4 蓝条真机核查、比例专项截图、中/青少年跟练视频核验均已完成（见上表）。
+2. **素材 ZIP / ASSET_MAPPING 缺失** → 仍阻塞 Part2 全套图标 1:1 替换（不凭空生成；仅 4×4 联系表可裁剪）。
+3. **视频生成未启动** → 若确需"同动作双风格视频"，需 agnes 视频工具 + 真机核验后补。当前 16 MP4 矩阵已覆盖所有有示范动作，风格仅驱动立绘。
 
 ## 红线遵守声明
 - 未删除 Room 数据 / 姿态识别 / 已有视频资源；未覆盖未提交用户代码；未做危险 git 清理；推送 fast-forward 无 force。
